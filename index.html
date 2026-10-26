@@ -27,25 +27,23 @@
         import { createRoot } from 'react-dom/client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    Upload, FileText, File, Video, Camera, Image as ImageIcon, 
-    PenTool, Save, Trash2, ChevronRight, AlertCircle, CheckCircle2, 
+import {
+    Upload, FileText, File, Video, Camera, Image as ImageIcon,
+    PenTool, Save, Trash2, ChevronRight, AlertCircle, CheckCircle2,
     Clapperboard, PenLine, Undo
 } from 'lucide-react';
 
-const loadScript = (src) => {
-    return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-            resolve();
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.body.appendChild(script);
-    });
-};
+const loadScript = (src) => new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+        resolve();
+        return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.body.appendChild(script);
+});
 
 const CDNS = {
     localforage: 'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
@@ -72,6 +70,7 @@ const normalizeSceneId = (rawValue) => {
     if (!rawValue) return null;
     const str = String(rawValue).trim().replace(/[\u2010-\u2015\u2212]/g, '-');
     const compact = str.replace(/\s+/g, '').replace(/[（)]/g, '').replace(/^[^\d]*/, '');
+
     const direct = compact.match(/^(\d{1,3})(?:-(\d{1,3}[A-Za-z]?))$/);
     if (direct) return `${direct[1]}-${direct[2]}`;
 
@@ -92,8 +91,18 @@ const isLikelySceneId = (id) => {
     const numA = Number(a);
     const numB = Number((b || '').replace(/[^\d]/g, ''));
     if (!Number.isFinite(numA) || !Number.isFinite(numB)) return false;
-    if (numA > 200 || numB > 200) return false;
+    if (numA > 1000 || numB > 1000) return false;
     return true;
+};
+
+const isNoiseLike = (id) => {
+    if (!id) return true;
+    const raw = String(id).trim();
+    if (/^(\d{1,2})([:：]\d{2})$/.test(raw)) return true;
+    if (/^(\d{1,4})[-/]\d{1,2}[-/]\d{1,2}$/.test(raw)) return true;
+    if (/^(\d{1,2}[月日])$/.test(raw)) return true;
+    if (/^(\d{1,2}:\d{2})$/.test(raw)) return true;
+    return false;
 };
 
 const collectSceneCandidatesFromText = (text) => {
@@ -101,38 +110,35 @@ const collectSceneCandidatesFromText = (text) => {
     const candidates = [];
     const seen = new Set();
 
-    const scenePatterns = [
-        /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:])/g,
-        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:])/g,
+    const patterns = [
+        /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:：])/g,
+        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:：])/g,
         /第\s*(\d{1,3})\s*[-–—]?\s*(\d{1,3}[A-Za-z]?)\s*场/g,
         /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?:\s*（[^）]*）)?/g,
-        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?:\s*（[^）]*）)?/g,
-        /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?:\s*\([^)]*\))?/g,
-        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?:\s*\([^)]*\))?/g
+        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?:\s*（[^）]*）)?/g
     ];
 
-    scenePatterns.forEach(regex => {
+    patterns.forEach(regex => {
         const matches = [...normalizedText.matchAll(regex)];
         matches.forEach(match => {
-            const id = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
-            if (!id || !isLikelySceneId(id) || seen.has(id)) return;
-            seen.add(id);
-            candidates.push({ id, index: match.index ?? 0, raw: match[0].trim() });
+            const candidate = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
+            if (!candidate || !isLikelySceneId(candidate) || isNoiseLike(candidate) || seen.has(candidate)) return;
+            seen.add(candidate);
+            candidates.push({ id: candidate, index: match.index ?? 0, raw: match[0].trim() });
         });
     });
 
-    const grouped = candidates.sort((a, b) => a.index - b.index);
-    if (grouped.length > 0) return grouped;
+    if (candidates.length > 0) return candidates.sort((a, b) => a.index - b.index);
 
     const lines = normalizedText.split(/\n+/);
-    lines.forEach((line, lineIndex) => {
+    lines.forEach((line) => {
         if (!/(场次|scene|SCENE|Scene)/i.test(line)) return;
         const matches = [...line.matchAll(/(\d{1,3})\s*(?:[-–—]|\s+)(\d{1,3}[A-Za-z]?)/g)];
         matches.forEach(match => {
-            const id = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
-            if (!id || !isLikelySceneId(id) || seen.has(id)) return;
-            seen.add(id);
-            candidates.push({ id, index: lineIndex, raw: match[0].trim() });
+            const candidate = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
+            if (!candidate || !isLikelySceneId(candidate) || isNoiseLike(candidate) || seen.has(candidate)) return;
+            seen.add(candidate);
+            candidates.push({ id: candidate, index: 0, raw: match[0].trim() });
         });
     });
 
@@ -143,22 +149,21 @@ const buildSceneMatchPatterns = (sceneId) => {
     const [a, b] = sceneId.split('-');
     const second = String(b || '').trim();
     const secondNum = second.replace(/[^\d]/g, '');
+    const suffix = second.replace(/\d/g, '');
     const variants = [
         `${a}-${second}`,
         `${a} ${second}`,
         `${a}-${secondNum}`,
         `${a} ${secondNum}`,
-        `${a}-${secondNum}${second.replace(/\d/g, '')}`,
-        `${a} ${secondNum}${second.replace(/\d/g, '')}`,
+        `${a}-${secondNum}${suffix}`,
+        `${a} ${secondNum}${suffix}`,
         `第${a}场`,
         `第${a}-${second}场`,
         `第${a}-${secondNum}场`,
         `第${a} ${second} 场`
     ];
 
-    return variants.filter(Boolean).map(v => 
-        new RegExp(`(?:^|\\n|\\s|[（(])${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
-    );
+    return variants.filter(Boolean).map((v) => new RegExp(`(?:^|\\n|\\s|[（(])${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'));
 };
 
 const parseSceneIds = (text) => {
@@ -170,10 +175,10 @@ const parseSceneIds = (text) => {
     const results = [];
     const seen = new Set();
     fallback.forEach(match => {
-        const id = normalizeSceneId(`${match[1]}-${match[2]}`);
-        if (!id || seen.has(id) || !isLikelySceneId(id)) return;
-        seen.add(id);
-        results.push({ id, index: match.index ?? 0, raw: match[0].trim() });
+        const candidate = normalizeSceneId(`${match[1]}-${match[2]}`);
+        if (!candidate || seen.has(candidate) || !isLikelySceneId(candidate) || isNoiseLike(candidate)) return;
+        seen.add(candidate);
+        results.push({ id: candidate, index: match.index ?? 0, raw: match[0].trim() });
     });
     return results.sort((a, b) => a.index - b.index);
 };
@@ -348,11 +353,10 @@ export default function SetTrackerApp() {
                 }
             }
 
-            const finalScenes = scenes.filter(scene => scene && scene.id && scene.id !== 'Uncategorized').length > 0
-                ? scenes.filter(scene => scene && scene.id && scene.id !== 'Uncategorized')
-                : scenes;
-
+            const validScenes = scenes.filter(scene => scene && scene.id && scene.id !== 'Uncategorized');
+            const finalScenes = validScenes.length > 0 ? validScenes : scenes;
             const chunks = chunkScriptByScenes(spText, finalScenes);
+
             setCallSheetText(csText);
             setScriptText(spText);
             setParsedScenes(finalScenes);
@@ -395,12 +399,7 @@ export default function SetTrackerApp() {
     }
 
     if (appStatus === 'import') {
-        return (
-            <ImportScreen 
-                onProcess={handleProcessFiles} 
-                toast={toast} 
-            />
-        );
+        return <ImportScreen onProcess={handleProcessFiles} toast={toast} />;
     }
 
     return (
@@ -425,7 +424,7 @@ export default function SetTrackerApp() {
                         <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
                             <FileText className="w-4 h-4 mr-1.5" /> 通告场次列表
                         </h2>
-                        <div className="text-[11px] text-slate-500 leading-tight">从通告��自动提取，点击查看剧本与机位笔记</div>
+                        <div className="text-[11px] text-slate-500 leading-tight">从通告单自动提取，点击查看剧本与机位笔记</div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                         {parsedScenes.map((scene, idx) => (
@@ -433,9 +432,9 @@ export default function SetTrackerApp() {
                                 key={`${scene.id}-${idx}`}
                                 onClick={() => setActiveSceneId(scene.id)}
                                 className={`w-full text-left px-3 py-3 rounded-xl transition-all flex items-center justify-between ${
-                                    activeSceneId === scene.id 
-                                    ? 'bg-amber-500/10 border border-amber-500/50 text-amber-400' 
-                                    : 'bg-slate-800/40 border border-transparent text-slate-300 hover:bg-slate-800'
+                                    activeSceneId === scene.id
+                                        ? 'bg-amber-500/10 border border-amber-500/50 text-amber-400'
+                                        : 'bg-slate-800/40 border border-transparent text-slate-300 hover:bg-slate-800'
                                 }`}
                             >
                                 <span className="font-mono font-bold text-sm">场 {scene.id}</span>
@@ -467,7 +466,7 @@ export default function SetTrackerApp() {
                     </div>
                 </section>
 
-                <Workstation 
+                <Workstation
                     activeSceneId={activeSceneId}
                     workstationData={workstationData}
                     setWorkstationData={setWorkstationData}
@@ -518,8 +517,9 @@ function ImportScreen({ onProcess, toast }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors relative ${callSheet ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-700 bg-slate-800/50 hover:border-emerald-500/40'}`}>
-                        <input 
-                            type="file" accept=".pdf,.txt"
+                        <input
+                            type="file"
+                            accept=".pdf,.txt"
                             onChange={e => setCallSheet(e.target.files[0])}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
@@ -532,8 +532,9 @@ function ImportScreen({ onProcess, toast }) {
                     </div>
 
                     <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors relative ${script ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-700 bg-slate-800/50 hover:border-cyan-500/40'}`}>
-                        <input 
-                            type="file" accept=".pdf,.docx,.txt"
+                        <input
+                            type="file"
+                            accept=".pdf,.docx,.txt"
                             onChange={e => setScript(e.target.files[0])}
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
@@ -547,7 +548,7 @@ function ImportScreen({ onProcess, toast }) {
                 </div>
 
                 <div className="flex flex-col items-center pt-4">
-                    <button 
+                    <button
                         onClick={handleStart}
                         disabled={!callSheet || isProcessing}
                         className="w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
@@ -663,6 +664,7 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         const cw = canvas.width;
         const ch = canvas.height;
         const vw = Math.round(ch * (9 / 16));
@@ -698,7 +700,7 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
                 <div className="space-y-3 bg-slate-800/40 p-3 rounded-xl border border-slate-700/50">
                     <div>
                         <label className="text-xs font-bold text-slate-400 mb-1.5 flex items-center"><Camera className="w-3 h-3 mr-1"/> 摄影机机型</label>
-                        <select 
+                        <select
                             value={activeData.camera}
                             onChange={(e) => updateActiveData('camera', e.target.value)}
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 appearance-none"
@@ -714,7 +716,7 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
 
                     <div>
                         <label className="text-xs font-bold text-slate-400 mb-1.5 flex items-center"><ImageIcon className="w-3 h-3 mr-1"/> 镜头选择</label>
-                        <select 
+                        <select
                             value={activeData.lens}
                             onChange={(e) => updateActiveData('lens', e.target.value)}
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-amber-400 font-mono focus:outline-none focus:border-amber-500 appearance-none"
@@ -750,11 +752,11 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
                             <Undo className="w-3 h-3 mr-1" /> 清空
                         </button>
                     </div>
-                    <div 
-                        ref={containerRef} 
+                    <div
+                        ref={containerRef}
                         className="w-full h-[200px] rounded-xl overflow-hidden border border-slate-700 bg-slate-800 relative shadow-inner"
                     >
-                        <canvas 
+                        <canvas
                             ref={canvasRef}
                             onPointerDown={handlePointerDown}
                             onPointerMove={handlePointerMove}
@@ -771,7 +773,7 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
 
                 <div className="space-y-2 flex-1 flex flex-col">
                     <label className="text-xs font-bold text-slate-400 flex items-center"><PenLine className="w-3 h-3 mr-1"/> 现场场记与摄影笔记</label>
-                    <textarea 
+                    <textarea
                         value={activeData.notes}
                         onChange={(e) => updateActiveData('notes', e.target.value)}
                         placeholder="输入光比要求、走位变化、灯具选型、台词飞页..."
