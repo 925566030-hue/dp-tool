@@ -6,13 +6,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="片场工作台">
-    <title>《不再遗憾的夏天》iPad片场通告与剧本工作台</title>
+    <title>《我告白的第十年》iPad片场通告与剧本工作台</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- 引入离线文件解析依赖 (PDF.js / Mammoth) -->
+    <!-- 离线文件解析依赖 (PDF.js / Mammoth) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -48,13 +48,12 @@
         }
     </script>
     <style>
-        /* Custom Scrollbars for iPad Pro/Mini Smooth Scrolling */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        /* iPad Pro & Mini 平滑滚动与触控优化 */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: rgba(15, 18, 23, 0.6); }
         ::-webkit-scrollbar-thumb { background: rgba(61, 71, 92, 0.7); border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(245, 158, 11, 0.8); }
 
-        /* Prevent elastic bounce & double-tap zoom issues on iPad */
         body {
             overscroll-behavior: none;
             -webkit-tap-highlight-color: transparent;
@@ -65,11 +64,12 @@
             -webkit-user-select: text;
         }
 
-        /* Script Line Highlights */
-        .hl-yellow { background: rgba(245, 158, 11, 0.22); border-left: 3px solid #f59e0b; }
-        .hl-cyan { background: rgba(6, 182, 212, 0.22); border-left: 3px solid #06b6d4; }
-        .hl-rose { background: rgba(244, 63, 94, 0.22); border-left: 3px solid #f43f5e; }
-        .hl-emerald { background: rgba(16, 185, 129, 0.22); border-left: 3px solid #10b981; }
+        /* 剧本高亮样式 */
+        .hl-yellow { background: rgba(245, 158, 11, 0.25); border-left: 3px solid #f59e0b; padding-left: 6px; border-radius: 4px; }
+        .hl-cyan { background: rgba(6, 182, 212, 0.25); border-left: 3px solid #06b6d4; padding-left: 6px; border-radius: 4px; }
+        .hl-rose { background: rgba(244, 63, 94, 0.25); border-left: 3px solid #f43f5e; padding-left: 6px; border-radius: 4px; }
+        .hl-emerald { background: rgba(16, 185, 129, 0.25); border-left: 3px solid #10b981; padding-left: 6px; border-radius: 4px; }
+        .hl-focus { background: rgba(245, 158, 11, 0.15); border-left: 3px solid #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.2); }
 
         .touch-btn:active { transform: scale(0.97); }
 
@@ -82,26 +82,27 @@
 </head>
 <body class="bg-studio-950 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans">
 
-    <!-- ==================== TOP STUDIO HEADER BAR ==================== -->
-    <header class="bg-studio-900 border-b border-studio-700/80 px-4 pb-3 flex items-center justify-between shrink-0 z-20 shadow-lg relative" style="padding-top: max(env(safe-area-inset-top), 20px); min-height: calc(4rem + env(safe-area-inset-top));">
+    <!-- ==================== 顶部导航栏 ==================== -->
+    <header class="h-16 bg-studio-900 border-b border-studio-700/80 px-4 flex items-center justify-between shrink-0 z-20 shadow-lg">
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-amber-500/20">
                 <i class="fa-solid fa-clapperboard text-studio-950 text-lg"></i>
             </div>
             <div>
                 <div class="flex items-center space-x-2">
-                    <h1 class="font-bold text-base md:text-lg tracking-tight text-white">片场数智工作台</h1>
-                    <span class="px-2 py-0.5 text-xs font-mono font-semibold rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30">离线安全版</span>
+                    <h1 id="headerProjectTitle" class="font-bold text-base md:text-lg tracking-tight text-white">片场工作台 · 《我告白的第十年》</h1>
+                    <span class="px-2 py-0.5 text-xs font-mono font-semibold rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30">离线智能版</span>
                     <span class="hidden xl:inline-flex items-center px-2 py-0.5 text-xs rounded-md bg-studio-800 text-slate-300 border border-studio-700">
-                        <i class="fa-solid fa-microchip text-emerald-400 mr-1.5"></i>已开启 Retina 防锯齿
+                        <i class="fa-solid fa-check-double text-emerald-400 mr-1.5"></i>双向精准匹配
                     </span>
                 </div>
-                <p class="text-[11px] text-slate-400 truncate max-w-md">
-                    专为 iPad Mini 6 优化 · 自动双向解析 · Apple Pencil 原生书写
+                <p id="headerSubtitle" class="text-[11px] text-slate-400 truncate max-w-md">
+                    iPad Mini 6 / Pro 专属优化 · 通告联动剧本 · 摄影打板与高清截图批注
                 </p>
             </div>
         </div>
 
+        <!-- 拍摄进度条 -->
         <div class="hidden lg:flex items-center space-x-3 bg-studio-850 px-3.5 py-1.5 rounded-xl border border-studio-700/70">
             <div class="text-xs w-48">
                 <div class="flex items-center justify-between space-x-4 mb-1">
@@ -114,6 +115,7 @@
             </div>
         </div>
 
+        <!-- 顶部操作按钮 -->
         <div class="flex items-center space-x-2">
             <button onclick="openModal('crewModal')" class="touch-btn px-3 py-2 rounded-xl bg-studio-800 hover:bg-studio-700 border border-studio-700 text-xs md:text-sm font-medium text-slate-200 flex items-center space-x-1.5 transition">
                 <i class="fa-solid fa-walkie-talkie text-amber-400"></i>
@@ -125,12 +127,12 @@
             </button>
             <button onclick="openModal('exportModal')" class="touch-btn px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-studio-950 font-bold text-xs md:text-sm flex items-center space-x-1.5 shadow-md shadow-amber-500/20 transition">
                 <i class="fa-solid fa-file-export"></i>
-                <span class="hidden sm:inline">导出报告</span>
+                <span class="hidden sm:inline">收工日报</span>
             </button>
         </div>
     </header>
 
-    <!-- ==================== MOBILE / IPAD PORTRAIT PANEL SWITCHER ==================== -->
+    <!-- ==================== 移动端 / 竖屏 栏目切换器 ==================== -->
     <div class="flex lg:hidden bg-studio-900 border-b border-studio-800 px-3 py-1.5 gap-2 shrink-0">
         <button onclick="switchMobileMainTab('schedule')" id="mobTab-schedule" class="flex-1 py-2 rounded-lg text-xs font-bold bg-amber-500 text-studio-950 flex items-center justify-center space-x-1.5">
             <i class="fa-solid fa-list-check"></i><span>通告单</span>
@@ -143,21 +145,21 @@
         </button>
     </div>
 
-    <!-- ==================== MAIN 3-COLUMN IPAD WORKSPACE ==================== -->
+    <!-- ==================== 主工作区 (3列iPad专业布局) ==================== -->
     <main class="flex-1 flex overflow-hidden relative">
 
-        <!-- ========== COLUMN 1: CALL SHEET SCHEDULE (适配 mini6: w-[280px]) ========== -->
-        <section id="col-schedule" class="w-full lg:w-[280px] xl:w-[320px] bg-studio-900 border-r border-studio-800 flex flex-col shrink-0 h-full">
+        <!-- ========== 第1列: 通告单拍摄日程 (CALL SHEET) ========== -->
+        <section id="col-schedule" class="w-full lg:w-[290px] xl:w-[330px] bg-studio-900 border-r border-studio-800 flex flex-col shrink-0 h-full">
             <div class="p-3 border-b border-studio-800 space-y-2.5 bg-studio-900/90">
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input id="scheduleSearchInput" oninput="renderScheduleList()" type="text" placeholder="搜索场次号、内容..." 
+                    <input id="scheduleSearchInput" oninput="renderScheduleList()" type="text" placeholder="搜索场次号、场景、内容..." 
                         class="w-full bg-studio-850 border border-studio-700 focus:border-amber-500 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none">
                     <button onclick="clearScheduleSearch()" id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
                         <i class="fa-solid fa-circle-xmark text-xs"></i>
                     </button>
                 </div>
-                <!-- Status Filter Pills -->
+                <!-- 状态筛选胶囊 -->
                 <div class="grid grid-cols-4 gap-1 text-center">
                     <button onclick="setStatusFilter('ALL')" id="statBtn-ALL" class="stat-filter-btn py-1.5 rounded-lg text-[11px] font-semibold bg-studio-700 text-white">全部</button>
                     <button onclick="setStatusFilter('pending')" id="statBtn-pending" class="stat-filter-btn py-1.5 rounded-lg text-[11px] font-medium bg-studio-850 text-slate-400 hover:bg-studio-800">待拍</button>
@@ -166,17 +168,18 @@
                 </div>
             </div>
 
-            <!-- Call Sheet Scene Cards List -->
+            <!-- 通告场次卡片列表 -->
             <div id="scheduleListContainer" class="flex-1 overflow-y-auto p-2.5 space-y-2">
                 <div class="text-center py-12 px-4 text-slate-500 text-xs">
                     <i class="fa-solid fa-file-import text-2xl mb-2 block text-cyan-400/50"></i>
-                    请点击右上角导入通告单
+                    请点击右上角导入通告单或点击载入预设示例
                 </div>
             </div>
         </section>
 
-        <!-- ========== COLUMN 2: INTERACTIVE LINKED SCRIPT VIEWER ========== -->
+        <!-- ========== 第2列: 剧本智能联动展示 (LINKED SCRIPT VIEWER) ========== -->
         <section id="col-script" class="hidden lg:flex flex-1 bg-studio-950 flex-col h-full overflow-hidden border-r border-studio-800">
+            <!-- 剧本控制顶部栏 -->
             <div class="p-3 bg-studio-900 border-b border-studio-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
                 <div class="flex items-center bg-studio-850 p-1 rounded-xl border border-studio-700">
                     <button onclick="setScriptMode('matched')" id="scriptMode-matched" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-studio-950 transition flex items-center space-x-1.5">
@@ -186,11 +189,12 @@
                         <i class="fa-solid fa-book-open"></i><span>全剧检索</span>
                     </button>
                 </div>
+
                 <div class="flex items-center space-x-2">
                     <div id="fullScriptSearchBox" class="hidden relative">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input id="fullScriptSearchInput" oninput="renderScriptPanel()" type="text" placeholder="搜索台词..." 
-                            class="bg-studio-850 border border-studio-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 w-32 focus:outline-none focus:border-cyan-400">
+                        <input id="fullScriptSearchInput" oninput="renderScriptPanel()" type="text" placeholder="搜索台词或场次..." 
+                            class="bg-studio-850 border border-studio-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 w-36 focus:outline-none focus:border-cyan-400">
                     </div>
                     <div class="flex items-center bg-studio-850 rounded-xl border border-studio-700 p-0.5">
                         <button onclick="adjustScriptFontSize(-1)" class="px-2.5 py-1 text-xs text-slate-300 hover:text-white">A-</button>
@@ -200,32 +204,37 @@
                 </div>
             </div>
 
-            <div id="activeSceneBanner" class="bg-gradient-to-r from-studio-850 via-studio-800 to-studio-850 border-b border-studio-700/80 px-4 py-3 shrink-0">
+            <!-- 当前场次联动状态横幅 -->
+            <div id="activeSceneBanner" class="bg-gradient-to-r from-studio-850 via-studio-800 to-studio-850 border-b border-studio-700/80 px-4 py-2.5 shrink-0">
                 <div class="text-xs text-slate-400">尚未选择场次</div>
             </div>
 
-            <div id="scriptContentContainer" class="flex-1 overflow-y-auto px-5 py-4 space-y-5 selectable-text">
+            <!-- 剧本正文容器 -->
+            <div id="scriptContentContainer" class="flex-1 overflow-y-auto px-5 py-4 space-y-3 selectable-text">
                 <div class="h-full flex flex-col items-center justify-center text-slate-600 text-sm space-y-3">
-                    <i class="fa-solid fa-mug-hot text-4xl"></i>
-                    <p>导入剧本文件后，将在此处自动高亮对应场次的台词</p>
+                    <i class="fa-solid fa-scroll text-4xl text-amber-500/40"></i>
+                    <p>导入剧本文件后，点选左侧通告场次，即可在此处自动匹配展示剧本台词</p>
                 </div>
             </div>
 
+            <!-- 底部辅助说明 -->
             <div class="px-4 py-2 bg-studio-900/90 border-t border-studio-800 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
                 <div class="flex items-center space-x-3 hidden sm:flex">
                     <span>点按台词标记：</span>
                     <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1"></span>重点</span>
                     <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-cyan-400 mr-1"></span>机位</span>
                     <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>灯光</span>
+                    <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-rose-400 mr-1"></span>情绪</span>
                 </div>
                 <button onclick="scrollToTopOfScript()" class="text-slate-400 hover:text-white">
-                    <i class="fa-solid fa-arrow-up mr-1"></i>顶部
+                    <i class="fa-solid fa-arrow-up mr-1"></i>回到顶部
                 </button>
             </div>
         </section>
 
-        <!-- ========== COLUMN 3: SCENE WORKSPACE (适配 mini6: w-[320px]) ========== -->
+        <!-- ========== 第3列: 现场记录工作区 (WORKSPACE) ========== -->
         <section id="col-workspace" class="hidden lg:flex w-full lg:w-[320px] xl:w-[380px] bg-studio-900 flex-col shrink-0 h-full overflow-hidden">
+            <!-- 工作区选项卡 -->
             <div class="p-2.5 bg-studio-900 border-b border-studio-800 grid grid-cols-3 gap-1.5 shrink-0">
                 <button onclick="switchWorkspaceTab('shots')" id="wsTab-shots" class="ws-tab-btn py-2 px-1 rounded-xl text-[11px] font-bold bg-amber-500 text-studio-950 flex flex-col items-center justify-center space-y-0.5 transition">
                     <i class="fa-solid fa-sliders text-sm"></i><span>参数/场记</span>
@@ -239,12 +248,13 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-3.5 space-y-4">
-                <!-- PANEL 1: SHOTS -->
+                <!-- 面板 1: 参数与场记 -->
                 <div id="wsPanel-shots" class="space-y-4">
+                    <!-- 场次状态切换 -->
                     <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80">
                         <div class="flex items-center justify-between mb-2.5">
                             <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">场次状态</span>
-                            <span id="wsSceneCodeLabel" class="font-mono text-xs text-amber-400 font-bold">请先选择</span>
+                            <span id="wsSceneCodeLabel" class="font-mono text-xs text-amber-400 font-bold">顺1 · 场 38-2</span>
                         </div>
                         <div class="grid grid-cols-4 gap-1.5">
                             <button onclick="updateCurrentSceneStatus('pending')" id="statusOpt-pending" class="touch-btn py-2 rounded-xl text-[10px] font-bold border border-studio-700 bg-studio-800 text-slate-300 flex flex-col items-center space-y-1"><i class="fa-regular fa-clock text-sm"></i><span>待拍</span></button>
@@ -254,62 +264,69 @@
                         </div>
                     </div>
 
+                    <!-- 摄影与灯光记录 -->
                     <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80 space-y-3">
-                        <h3 class="text-[11px] font-bold text-cyan-400 flex items-center"><i class="fa-solid fa-camera mr-1.5"></i>摄影与灯光记录</h3>
+                        <h3 class="text-[11px] font-bold text-cyan-400 flex items-center"><i class="fa-solid fa-camera mr-1.5"></i>摄影与灯光参数</h3>
                         <div class="grid grid-cols-2 gap-2">
                             <input id="camInput-camera" oninput="saveCameraParams()" type="text" placeholder="机型/运动 (如A机 斯坦尼康)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-cyan-400">
-                            <input id="camInput-lens" oninput="saveCameraParams()" type="text" placeholder="镜头 (如35mm)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-cyan-300 focus:outline-none focus:border-cyan-400">
-                            <input id="camInput-aperture" oninput="saveCameraParams()" type="text" placeholder="光圈/ND (如T2.0)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-amber-300 focus:outline-none focus:border-cyan-400">
-                            <input id="camInput-kelvin" oninput="saveCameraParams()" type="text" placeholder="色温/FPS (如5600K)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-cyan-400">
+                            <input id="camInput-lens" oninput="saveCameraParams()" type="text" placeholder="镜头 (如35mm T2.0)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-cyan-300 focus:outline-none focus:border-cyan-400">
+                            <input id="camInput-aperture" oninput="saveCameraParams()" type="text" placeholder="光圈/ND (如T2.8 ND0.6)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-amber-300 focus:outline-none focus:border-cyan-400">
+                            <input id="camInput-kelvin" oninput="saveCameraParams()" type="text" placeholder="色温/FPS (如5600K 25fps)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-cyan-400">
                         </div>
-                        <input id="camInput-lighting" oninput="saveCameraParams()" type="text" placeholder="灯光笔记 (如M18窗外打冷光)..." class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-400">
+                        <input id="camInput-lighting" oninput="saveCameraParams()" type="text" placeholder="灯光笔记 (如M18窗外打冷光, 爱图仕面光)..." class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-400">
                     </div>
 
+                    <!-- 场记打板 -->
                     <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80 space-y-3">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-[11px] font-bold text-amber-400 flex items-center"><i class="fa-solid fa-clapperboard mr-1.5"></i>场记打板</h3>
-                            <button onclick="addQuickTake()" class="px-2 py-1 rounded-lg bg-amber-500 text-studio-950 font-bold text-[10px]">记一条</button>
+                            <h3 class="text-[11px] font-bold text-amber-400 flex items-center">
+                                <i class="fa-solid fa-clapperboard mr-1.5"></i>场记打板 (<span id="badgeTakesCount">0</span>)
+                            </h3>
+                            <button onclick="addQuickTake()" class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-studio-950 font-bold text-[11px] flex items-center space-x-1 shadow">
+                                <i class="fa-solid fa-plus"></i><span>记一条</span>
+                            </button>
                         </div>
-                        <div class="grid grid-cols-12 gap-1 bg-studio-900 p-1.5 rounded-lg border border-studio-700">
-                            <input id="newTakeShot" type="text" value="1镜" placeholder="镜号" class="col-span-3 bg-studio-850 border border-studio-700 rounded text-[10px] font-mono text-center text-white">
-                            <input id="newTakeNum" type="text" value="1次" placeholder="次数" class="col-span-2 bg-studio-850 border border-studio-700 rounded text-[10px] font-mono text-center text-white">
-                            <select id="newTakeResult" class="col-span-3 bg-studio-850 border border-studio-700 rounded text-[10px] font-bold text-emerald-400">
-                                <option value="OK">✅ 保</option>
-                                <option value="BACKUP">⚠️ 备</option>
+                        <div class="grid grid-cols-12 gap-1.5 bg-studio-900 p-2 rounded-xl border border-studio-700">
+                            <input id="newTakeShot" type="text" value="1镜" placeholder="镜号" class="col-span-3 bg-studio-850 border border-studio-700 rounded-lg text-xs font-mono text-center text-white py-1">
+                            <input id="newTakeNum" type="text" value="1次" placeholder="次数" class="col-span-3 bg-studio-850 border border-studio-700 rounded-lg text-xs font-mono text-center text-white py-1">
+                            <select id="newTakeResult" class="col-span-6 bg-studio-850 border border-studio-700 rounded-lg text-xs font-bold text-emerald-400 py-1 px-1">
+                                <option value="OK">✅ 保 OK</option>
+                                <option value="BACKUP">⚠️ 备选</option>
                                 <option value="NG">❌ NG</option>
                             </select>
-                            <input id="newTakeComment" type="text" placeholder="备注" class="col-span-4 bg-studio-850 border border-studio-700 rounded px-1.5 text-[10px] text-white">
+                            <input id="newTakeComment" type="text" placeholder="备注 (如: 导演满意/焦点实/演员状态佳)..." class="col-span-12 bg-studio-850 border border-studio-700 rounded-lg px-2 text-xs text-white py-1">
                         </div>
                         <div id="takesListContainer" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
                     </div>
                 </div>
 
-                <!-- PANEL 2: FRAMES (PENCIL READY) -->
+                <!-- 面板 2: 截图批注 (SUPPORT APPLE PENCIL) -->
                 <div id="wsPanel-frames" class="hidden space-y-4">
                     <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
-                            <label class="cursor-pointer py-2 px-2 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-studio-950 font-bold text-[11px] flex flex-col items-center justify-center space-y-1">
-                                <i class="fa-solid fa-cloud-arrow-up text-base"></i><span>导入截图</span>
+                            <label class="cursor-pointer py-2.5 px-2 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-studio-950 font-bold text-xs flex flex-col items-center justify-center space-y-1 shadow">
+                                <i class="fa-solid fa-cloud-arrow-up text-base"></i><span>导入截图/拍照</span>
                                 <input id="screenshotFileInput" type="file" accept="image/*" multiple onchange="handleScreenshotUpload(event)" class="hidden">
                             </label>
-                            <button onclick="openAnnotatorWithMonitorTemplate()" class="py-2 px-2 rounded-xl bg-studio-800 border border-cyan-500/40 text-cyan-300 font-bold text-[11px] flex flex-col items-center justify-center space-y-1">
+                            <button onclick="openAnnotatorWithMonitorTemplate()" class="py-2.5 px-2 rounded-xl bg-studio-800 hover:bg-studio-750 border border-cyan-500/40 text-cyan-300 font-bold text-xs flex flex-col items-center justify-center space-y-1">
                                 <i class="fa-solid fa-compass-drafting text-base"></i><span>新建机位画板</span>
                             </button>
                         </div>
+                        <p class="text-[10px] text-slate-500 text-center">支持从iPad相册导入图传抓帧，或创建监视器画板用Apple Pencil手绘</p>
                     </div>
                     <div id="framesGalleryContainer" class="space-y-3"></div>
                 </div>
 
-                <!-- PANEL 3: NOTES -->
+                <!-- 面板 3: 现场笔记 -->
                 <div id="wsPanel-notes" class="hidden space-y-4">
                     <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80 space-y-3">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-xs font-bold text-amber-400">现场综合笔记</h3>
-                            <button onclick="insertTimestampToNote()" class="px-2 py-1 rounded bg-studio-800 text-[10px] text-slate-300 border border-studio-700">+ 当前时间</button>
+                            <h3 class="text-xs font-bold text-amber-400">现场导演与场记笔记</h3>
+                            <button onclick="insertTimestampToNote()" class="px-2 py-1 rounded-lg bg-studio-800 text-[10px] text-slate-300 border border-studio-700 hover:bg-studio-700">+ 当前时间</button>
                         </div>
-                        <textarea id="sceneNoteTextarea" oninput="saveSceneNotes()" rows="12" 
-                            placeholder="在此输入导演要求、连戏细节..."
-                            class="w-full bg-studio-900 border border-studio-700 focus:border-amber-500 rounded-xl p-3 text-sm text-slate-100 leading-relaxed focus:outline-none selectable-text"></textarea>
+                        <textarea id="sceneNoteTextarea" oninput="saveSceneNotes()" rows="14" 
+                            placeholder="在此输入导演特殊要求、连戏细节 (如服装纽扣、发型、手持道具位置)、特殊音效及重拍需求..."
+                            class="w-full bg-studio-900 border border-studio-700 focus:border-amber-500 rounded-xl p-3 text-xs md:text-sm text-slate-100 leading-relaxed focus:outline-none selectable-text"></textarea>
                     </div>
                 </div>
             </div>
@@ -317,161 +334,247 @@
 
     </main>
 
-    <!-- ==================== MODAL 1: RETINA ANNOTATOR (APPLE PENCIL 专属优化) ==================== -->
+    <!-- ==================== 模态框 1: RETINA ANNOTATOR (APPLE PENCIL 专属优化画板) ==================== -->
     <div id="annotatorModal" class="fixed inset-0 bg-black/95 z-50 hidden flex-col">
         <div class="h-14 bg-studio-900 border-b border-studio-700 px-4 flex items-center justify-between shrink-0">
-            <div class="flex items-center space-x-3">
-                <span class="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 font-mono text-xs font-bold" id="annotatorSceneBadge">顺1</span>
-                <input id="annotatorCaptionInput" type="text" placeholder="截图说明..." 
-                    class="bg-studio-800 border border-studio-700 rounded-xl px-3 py-1 text-xs text-white w-40 md:w-64 focus:outline-none focus:border-cyan-400">
+            <div class="flex items-center space-x-2 md:space-x-3">
+                <span class="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 font-mono text-xs font-bold" id="annotatorSceneBadge">场 38-2</span>
+                <input id="annotatorCaptionInput" type="text" placeholder="机位/光位说明..." 
+                    class="bg-studio-800 border border-studio-700 rounded-xl px-3 py-1 text-xs text-white w-36 md:w-56 focus:outline-none focus:border-cyan-400">
             </div>
 
+            <!-- 工具条 -->
             <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
-                <button onclick="setDrawTool('pen')" id="toolBtn-pen" class="draw-tool-btn px-2.5 py-1.5 rounded-lg bg-amber-500 text-studio-950 text-xs font-bold shrink-0"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="setDrawTool('arrow')" id="toolBtn-arrow" class="draw-tool-btn px-2.5 py-1.5 rounded-lg bg-studio-800 text-slate-200 text-xs font-medium shrink-0"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
-                <button onclick="stampIconOnCanvas('🎥 A机')" class="px-2.5 py-1.5 rounded-lg bg-studio-800 text-xs text-cyan-300 border border-studio-700 shrink-0">🎥</button>
-                <button onclick="stampIconOnCanvas('💡 主光')" class="px-2.5 py-1.5 rounded-lg bg-studio-800 text-xs text-amber-300 border border-studio-700 shrink-0">💡</button>
-                <div class="flex items-center space-x-1 pl-2 border-l border-studio-700 shrink-0">
-                    <button onclick="setDrawColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 ring-2 ring-white"></button>
-                    <button onclick="setDrawColor('#06b6d4')" class="w-6 h-6 rounded-full bg-cyan-400"></button>
-                    <button onclick="setDrawColor('#f43f5e')" class="w-6 h-6 rounded-full bg-rose-500"></button>
+                <button onclick="setDrawTool('pen')" id="toolBtn-pen" class="draw-tool-btn px-2.5 py-1.5 rounded-lg bg-amber-500 text-studio-950 text-xs font-bold shrink-0" title="自由画笔"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="setDrawTool('arrow')" id="toolBtn-arrow" class="draw-tool-btn px-2.5 py-1.5 rounded-lg bg-studio-800 text-slate-200 text-xs font-medium shrink-0" title="指示箭头"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
+                <button onclick="stampIconOnCanvas('🎥 A机')" class="px-2 py-1.5 rounded-lg bg-studio-800 text-xs text-cyan-300 border border-studio-700 shrink-0" title="机位标记">🎥 A机</button>
+                <button onclick="stampIconOnCanvas('💡 主光')" class="px-2 py-1.5 rounded-lg bg-studio-800 text-xs text-amber-300 border border-studio-700 shrink-0" title="灯光标记">💡 主光</button>
+                <button onclick="stampIconOnCanvas('👤 演员')" class="px-2 py-1.5 rounded-lg bg-studio-800 text-xs text-rose-300 border border-studio-700 shrink-0" title="站位标记">👤 站位</button>
+                <div class="flex items-center space-x-1 pl-1.5 border-l border-studio-700 shrink-0">
+                    <button onclick="setDrawColor('#f59e0b', this)" class="color-btn w-6 h-6 rounded-full bg-amber-500 ring-2 ring-white"></button>
+                    <button onclick="setDrawColor('#06b6d4', this)" class="color-btn w-6 h-6 rounded-full bg-cyan-400"></button>
+                    <button onclick="setDrawColor('#f43f5e', this)" class="color-btn w-6 h-6 rounded-full bg-rose-500"></button>
+                    <button onclick="setDrawColor('#ffffff', this)" class="color-btn w-6 h-6 rounded-full bg-white"></button>
                 </div>
-                <button onclick="undoCanvasStroke()" class="px-2.5 py-1.5 rounded-lg bg-studio-800 text-slate-300 shrink-0"><i class="fa-solid fa-rotate-left"></i></button>
+                <button onclick="undoCanvasStroke()" class="px-2.5 py-1.5 rounded-lg bg-studio-800 text-slate-300 hover:text-white shrink-0" title="撤销"><i class="fa-solid fa-rotate-left"></i></button>
             </div>
 
             <div class="flex items-center space-x-2">
                 <button onclick="closeAnnotatorModal()" class="px-3 py-1.5 rounded-xl bg-studio-800 text-slate-300 text-xs font-medium">取消</button>
-                <button onclick="saveAnnotatedCanvas()" class="px-3 py-1.5 rounded-xl bg-emerald-500 text-studio-950 font-bold text-xs flex items-center shadow-lg"><i class="fa-solid fa-floppy-disk mr-1"></i>保存</button>
+                <button onclick="saveAnnotatedCanvas()" class="px-3.5 py-1.5 rounded-xl bg-emerald-500 text-studio-950 font-bold text-xs flex items-center shadow-lg"><i class="fa-solid fa-floppy-disk mr-1"></i>保存</button>
             </div>
         </div>
 
-        <div class="flex-1 checkerboard-bg flex items-center justify-center overflow-hidden p-4 relative">
-            <!-- Canvas is visually sized by CSS, but internal resolution will be scaled for Retina -->
+        <div class="flex-1 checkerboard-bg flex items-center justify-center overflow-hidden p-3 relative">
             <canvas id="annotatorCanvas" class="shadow-2xl border border-studio-700 touch-none cursor-crosshair max-w-full max-h-full object-contain" style="border-radius: 8px;"></canvas>
         </div>
     </div>
 
-    <!-- ==================== MODAL: DYNAMIC IMPORT (本地文件智能提取) ==================== -->
+    <!-- ==================== 模态框 2: 智能导入与解析 (IMPORT MODAL) ==================== -->
     <div id="importModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="bg-studio-900 border border-studio-700 rounded-3xl max-w-2xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-6 text-center border-b border-studio-800">
-                <div class="inline-flex bg-cyan-500/10 p-3 rounded-2xl mb-2 border border-cyan-500/20">
+        <div class="bg-studio-900 border border-studio-700 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-5 text-center border-b border-studio-800 relative">
+                <div class="inline-flex bg-cyan-500/10 p-3 rounded-2xl mb-1.5 border border-cyan-500/20">
                     <i class="fa-solid fa-wand-magic-sparkles text-2xl text-cyan-400"></i>
                 </div>
-                <h2 class="text-xl font-bold text-white">智能导入与解析</h2>
-                <p class="text-xs text-slate-400 mt-1">本地处理，绝对安全。请在下方选择对应的 PDF 或 Word 文件</p>
+                <h2 class="text-xl font-bold text-white">导入通告单与剧本</h2>
+                <p class="text-xs text-slate-400 mt-1">本地解析，绝不上传云端，保障剧组隐私安全</p>
+                <button onclick="closeModal('importModal')" class="absolute right-4 top-4 text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
 
             <div class="p-6 overflow-y-auto space-y-4">
+                <!-- 文件上传区 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Call Sheet Input -->
+                    <!-- 通告单输入 -->
                     <div class="border-2 border-dashed border-studio-700 bg-studio-850 rounded-2xl p-5 text-center relative hover:bg-studio-800 transition">
                         <input id="fileCallSheet" type="file" accept=".pdf,.txt,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="updateFileName('fileCallSheet', 'labelCallSheet')"/>
                         <i class="fa-solid fa-file-pdf text-3xl text-emerald-400 mb-2"></i>
-                        <h3 id="labelCallSheet" class="text-sm font-bold text-slate-200">1. 选择通告单</h3>
-                        <p class="text-[10px] text-slate-500 mt-1">支持 PDF/Word，用于提取拍摄场次顺序</p>
+                        <h3 id="labelCallSheet" class="text-sm font-bold text-slate-200">1. 选择通告单文件</h3>
+                        <p class="text-[10px] text-slate-500 mt-1">支持 PDF / Word / TXT，解析顺号、场次、场景与内容</p>
                     </div>
 
-                    <!-- Script Input -->
+                    <!-- 剧本输入 -->
                     <div class="border-2 border-dashed border-studio-700 bg-studio-850 rounded-2xl p-5 text-center relative hover:bg-studio-800 transition">
                         <input id="fileScript" type="file" accept=".pdf,.docx,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="updateFileName('fileScript', 'labelScript')"/>
                         <i class="fa-solid fa-file-word text-3xl text-cyan-400 mb-2"></i>
-                        <h3 id="labelScript" class="text-sm font-bold text-slate-200">2. 选择剧本 (可选)</h3>
-                        <p class="text-[10px] text-slate-500 mt-1">支持 Word/PDF，根据场次号自动切片联动</p>
+                        <h3 id="labelScript" class="text-sm font-bold text-slate-200">2. 选择剧本文件</h3>
+                        <p class="text-[10px] text-slate-500 mt-1">支持 Word / PDF / TXT，按场次号自动切片与台词联动</p>
                     </div>
                 </div>
 
-                <div class="flex flex-col items-center pt-2">
-                    <button onclick="handleDynamicImport()" class="w-full px-6 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg hover:opacity-90 transition flex items-center justify-center">
-                        <i id="importSpinner" class="fa-solid fa-rocket mr-2"></i> 开始解析构建工作台
+                <!-- 导入主按钮 -->
+                <div class="flex flex-col items-center pt-2 space-y-2">
+                    <button onclick="handleDynamicImport()" class="w-full px-6 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-studio-950 shadow-lg transition flex items-center justify-center">
+                        <i id="importSpinner" class="fa-solid fa-rocket mr-2"></i> 开始解析并构建工作台
                     </button>
-                    <button onclick="closeModal('importModal')" class="mt-4 text-xs text-slate-500 hover:text-white">取消关闭</button>
+                    
+                    <!-- 一键载入真实示例 -->
+                    <button onclick="loadSampleDataset()" class="w-full px-4 py-2.5 rounded-xl text-xs font-semibold bg-studio-800 hover:bg-studio-750 text-amber-400 border border-amber-500/30 flex items-center justify-center space-x-1.5 transition">
+                        <i class="fa-solid fa-bolt text-amber-400"></i>
+                        <span>快速载入《我告白的第十年》真实通告与剧本 (24场精准匹配示例)</span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modals (Crew & Export remain lightweight) -->
+    <!-- ==================== 模态框 3: 通告总览 (CREW MODAL) ==================== -->
     <div id="crewModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="bg-studio-900 border border-studio-700 rounded-2xl max-w-xl w-full flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-studio-800 flex justify-between items-center"><h2 class="font-bold">剧组通告总览</h2><button onclick="closeModal('crewModal')"><i class="fa-solid fa-xmark"></i></button></div>
-            <div class="p-6 text-sm text-slate-400 text-center">如需查看特定剧组通讯录，请自定义本模块内容，或直接使用系统通讯录功能。</div>
+        <div class="bg-studio-900 border border-studio-700 rounded-3xl max-w-xl w-full flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-studio-800 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-clipboard-list text-amber-400"></i>
+                    <h2 class="font-bold text-white text-sm">当日通告总览及主创团队</h2>
+                </div>
+                <button onclick="closeModal('crewModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="crewSummaryContent" class="p-5 text-xs text-slate-300 space-y-3 overflow-y-auto max-h-[70vh]">
+                <div class="grid grid-cols-2 gap-3 bg-studio-850 p-3 rounded-xl border border-studio-800">
+                    <div><span class="text-slate-500">剧目：</span>《我告白的第十年》</div>
+                    <div><span class="text-slate-500">拍摄日：</span>第 2 天 (2026-06-16)</div>
+                    <div><span class="text-slate-500">天气：</span>多云 21～24℃</div>
+                    <div><span class="text-slate-500">日出日落：</span>04:41 / 19:17</div>
+                    <div><span class="text-slate-500">导演出发：</span>09:00</div>
+                    <div><span class="text-slate-500">大队出发：</span>08:50</div>
+                </div>
+                <div class="bg-studio-850 p-3 rounded-xl border border-studio-800 space-y-1.5">
+                    <div class="font-bold text-amber-400">各部门联系人：</div>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
+                        <div>制片主任：圆圆/悦悦 15269294129</div>
+                        <div>现场制片：赵坤 17660456005</div>
+                        <div>摄影指导：杨森</div>
+                        <div>灯光指导：大明</div>
+                        <div>造型指导：丁鑫 / 艾薇</div>
+                        <div>美术指导：张聿超团队</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
+    <!-- ==================== 模态框 4: 导出收工日报 (EXPORT MODAL) ==================== -->
     <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="bg-studio-900 border border-studio-700 rounded-2xl max-w-xl w-full flex flex-col overflow-hidden">
-            <div class="p-4 border-b border-studio-800 flex justify-between items-center"><h2 class="font-bold">导出进度与日报</h2><button onclick="closeModal('exportModal')"><i class="fa-solid fa-xmark"></i></button></div>
-            <div class="p-6 flex flex-col gap-3">
-                <button onclick="copyTextSummaryToClipboard()" class="py-3 bg-studio-800 rounded-xl text-sm font-bold text-white"><i class="fa-solid fa-copy mr-2"></i>复制文字版收工日报</button>
-                <button onclick="resetAllDataConfirm()" class="py-3 bg-rose-500/10 text-rose-400 rounded-xl text-sm font-bold mt-4"><i class="fa-solid fa-trash mr-2"></i>清空所有缓存数据</button>
+        <div class="bg-studio-900 border border-studio-700 rounded-3xl max-w-lg w-full flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-studio-800 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-export text-amber-400"></i>
+                    <h2 class="font-bold text-white text-sm">生成与导出收工日报</h2>
+                </div>
+                <button onclick="closeModal('exportModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 flex flex-col gap-3">
+                <p class="text-xs text-slate-400">系统将统计所有场次的完成状态、场记打板总条数及现场核心笔记，一键复制到微信或备忘录汇报：</p>
+                <button onclick="copyTextSummaryToClipboard()" class="py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 rounded-xl text-sm font-bold text-studio-950 flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-copy mr-2"></i>一键复制文字版收工日报
+                </button>
+                <button onclick="exportDataJson()" class="py-2.5 bg-studio-800 hover:bg-studio-750 text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center">
+                    <i class="fa-solid fa-download mr-2"></i>导出工作台数据备份 (JSON)
+                </button>
+                <button onclick="resetAllDataConfirm()" class="py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-xs font-bold mt-2">
+                    <i class="fa-solid fa-trash mr-1.5"></i>清空所有缓存重新开始
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- POPUPS & TOASTS -->
+    <!-- 台词标记弹出泡泡 -->
     <div id="linePopover" class="fixed z-40 hidden bg-studio-850 border border-amber-500/60 rounded-2xl shadow-2xl p-2.5 w-64 space-y-2">
-        <div class="flex justify-between items-center text-xs font-bold text-amber-400"><span>添加台词标记</span><button onclick="closeLinePopover()"><i class="fa-solid fa-xmark"></i></button></div>
-        <div class="grid grid-cols-4 gap-1">
-            <button onclick="applyLineHighlight('hl-yellow')" class="py-1 bg-amber-500/20 text-amber-300 text-[10px] rounded">情绪</button>
-            <button onclick="applyLineHighlight('hl-cyan')" class="py-1 bg-cyan-500/20 text-cyan-300 text-[10px] rounded">机位</button>
-            <button onclick="applyLineHighlight('hl-emerald')" class="py-1 bg-emerald-500/20 text-emerald-300 text-[10px] rounded">灯光</button>
-            <button onclick="applyLineHighlight('')" class="py-1 bg-studio-800 text-slate-400 text-[10px] rounded">清除</button>
+        <div class="flex justify-between items-center text-xs font-bold text-amber-400">
+            <span>添加台词标记</span>
+            <button onclick="closeLinePopover()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5">
+            <button onclick="applyLineHighlight('hl-yellow')" class="py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold rounded-lg">重点</button>
+            <button onclick="applyLineHighlight('hl-cyan')" class="py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-[10px] font-bold rounded-lg">机位</button>
+            <button onclick="applyLineHighlight('hl-emerald')" class="py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold rounded-lg">灯光</button>
+            <button onclick="applyLineHighlight('')" class="py-1 bg-studio-800 hover:bg-studio-700 text-slate-400 text-[10px] font-bold rounded-lg">清除</button>
         </div>
     </div>
 
+    <!-- 全局提示 TOAST -->
     <div id="toastNotification" class="fixed bottom-5 right-5 z-50 hidden bg-studio-800 border border-amber-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2 text-xs font-medium">
         <i class="fa-solid fa-circle-check text-emerald-400"></i><span id="toastMessage">已保存</span>
     </div>
 
-    <!-- ==================== CORE JAVASCRIPT ==================== -->
+    <!-- ==================== 核心业务与解析脚本 ==================== -->
     <script>
-        const STORAGE_KEY_STATE = "CINEPAD_DYNAMIC_V2";
+        const STORAGE_KEY_STATE = "CINEPAD_APP_V3";
+        const STORAGE_KEY_FRAMES = "CINEPAD_FRAMES_V3";
+
         let appState = {
+            projectTitle: "《我告白的第十年》",
             callSheet: [],
-            scripts: {},
+            scripts: {}, // key: "38-2" -> { id, episode, header, lines }
             lineAnnotations: {},
             selectedOrder: 1,
-            locationFilter: 'ALL',
             statusFilter: 'ALL',
             scriptMode: 'matched',
             scriptFontSize: 0
         };
-        let sceneFramesMap = {}; // Will be kept in memory for this demo (or use IndexedDB)
+
+        // 存储每场次的截图与画板草图: { [sceneId]: [ { id, dataUrl, caption, timestamp } ] }
+        let sceneFramesMap = {};
 
         function loadAppState() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY_STATE);
                 if (raw) {
-                    appState = JSON.parse(raw);
-                } else {
-                    // Start empty to force import
-                    appState.callSheet = [];
-                    appState.scripts = {};
+                    appState = Object.assign(appState, JSON.parse(raw));
                 }
-            } catch (err) { console.error(err); }
+                const rawFrames = localStorage.getItem(STORAGE_KEY_FRAMES);
+                if (rawFrames) {
+                    sceneFramesMap = JSON.parse(rawFrames);
+                }
+            } catch (err) {
+                console.error("加载本地存储失败:", err);
+            }
         }
 
         function saveAppState() {
-            localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(appState));
+            try {
+                localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(appState));
+            } catch (err) {
+                console.warn("保存主状态失败:", err);
+            }
+        }
+
+        function saveFramesToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY_FRAMES, JSON.stringify(sceneFramesMap));
+            } catch (err) {
+                console.warn("截图数据较多，超出本地配额:", err);
+            }
         }
 
         function getCurrentScene() {
             return appState.callSheet.find(s => s.order === appState.selectedOrder) || appState.callSheet[0] || null;
         }
 
-        // ==================== OPTIMIZATION 1 & 3: FILE PARSING ENGINES ====================
+        // ==================== 1. 文件文本提取引擎 ====================
         async function extractTextFromPdf(file) {
             const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-            let text = "";
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = "";
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const content = await page.getTextContent();
-                // 确保 PDF 表格间隙保留换行符，防止列数据被吞并
-                text += content.items.map(item => item.str).join("  ") + "\n"; 
+                // 保持换行与空格间隔
+                let lastY = null;
+                let pageStr = "";
+                for (let item of content.items) {
+                    if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
+                        pageStr += "\n";
+                    } else if (pageStr.length > 0 && !pageStr.endsWith(" ") && !pageStr.endsWith("\n")) {
+                        pageStr += " ";
+                    }
+                    pageStr += item.str;
+                    lastY = item.transform[5];
+                }
+                fullText += pageStr + "\n";
             }
-            return text;
+            return fullText;
         }
 
         async function extractTextFromDocx(file) {
@@ -480,55 +583,977 @@
             return result.value;
         }
 
-        function parseSceneIds(text) {
-            // 优化1核心：支持剧本(1-1)和通告单断裂表格(7 2 游泳馆)的双向抓取
-            const regex = /(?:第\s*(\d+)\s*场|场次\s*(\d+(?:-\d+[A-Za-z]?)?)|场\s*(\d+(?:-\d+[A-Za-z]?)?)|\b(\d+-\d+[A-Za-z]?)\b|(?:\b|\n)\s*(\d+)\s+(\d+[A-Za-z]?)\s+(?:[\u4e00-\u9fa5]{2,}))/g;
-            const matches = [...text.matchAll(regex)];
+        async function readFileAsText(file) {
+            if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                return await extractTextFromPdf(file);
+            } else if (file.name.endsWith('.docx')) {
+                return await extractTextFromDocx(file);
+            } else {
+                return await file.text();
+            }
+        }
+
+        // ==================== 2. 通告单智能表格解析引擎 ====================
+        function parseCallSheetText(text) {
+            const lines = text.split("\n");
             const scenes = [];
-            const uniqueIds = new Set();
+            let autoOrder = 1;
 
-            matches.forEach(match => {
-                let id = null;
-                if (match[4]) id = match[4]; // 匹配 "1-1"
-                else if (match[1]) id = match[1]; // 匹配 "第1场"
-                else if (match[2]) id = match[2]; // 匹配 "场次1"
-                else if (match[3]) id = match[3]; // 匹配 "场1"
-                else if (match[5] && match[6]) id = `${match[5]}-${match[6]}`; // 将表格中断裂的 "7 2" 缝合成 "7-2"
+            for (let rawLine of lines) {
+                const line = rawLine.trim();
+                if (!line) continue;
 
-                if (id && !uniqueIds.has(id)) {
-                    uniqueIds.add(id);
-                    scenes.push({ id, raw: match[0].trim(), index: match.index });
+                // 排除页眉无用字段、日期和联系电话
+                if (line.includes("出品人") || line.includes("制片主任") || line.includes("到达时间") || line.includes("注意事项")) {
+                    continue;
                 }
-            });
+
+                // 识别形如 "1 38-2 律所 停车场 日 外 小陆打了周 0.3..." 或 "38-2 公园 海边跑道 日 外..."
+                let order = null;
+                let sceneId = null;
+                let rest = "";
+
+                // 匹配1: 开头带顺序号 "1 38-2 ..."
+                const mWithOrder = line.match(/^(\d{1,3})\s+([0-9]+-[0-9]+[A-Za-z]?|[0-9]+[A-Za-z]?)\s+(.*)$/);
+                if (mWithOrder) {
+                    order = parseInt(mWithOrder[1], 10);
+                    sceneId = mWithOrder[2];
+                    rest = mWithOrder[3].trim();
+                } else {
+                    // 匹配2: 开头直接是场次号 "38-2 律所 停车场 日 外..."
+                    const mSceneOnly = line.match(/^([0-9]+-[0-9]+[A-Za-z]?)\s+(.*)$/);
+                    if (mSceneOnly) {
+                        order = autoOrder;
+                        sceneId = mSceneOnly[1];
+                        rest = mSceneOnly[2].trim();
+                    } else {
+                        continue;
+                    }
+                }
+                autoOrder = Math.max(autoOrder, order + 1);
+
+                // 解析气氛与内外 (日/夜/改日/晨/昏 + 内/外)
+                let mainSet = "片场";
+                let subSet = "";
+                let atmStr = "日 外";
+                let summary = "";
+                let pages = 0.5;
+
+                const atmRegex = /(?:^|\s+)(日|夜|晨|昏|改日|清晨|黄昏|机动)\s+(内|外|内外)(?:\s+|$)/;
+                const atmMatch = rest.match(atmRegex);
+
+                if (atmMatch) {
+                    atmStr = `${atmMatch[1]} ${atmMatch[2]}`;
+                    const beforeAtm = rest.substring(0, atmMatch.index).trim();
+                    const afterAtm = rest.substring(atmMatch.index + atmMatch[0].length).trim();
+
+                    const locParts = beforeAtm.split(/\s+/).filter(Boolean);
+                    if (locParts.length >= 2) {
+                        mainSet = locParts[0];
+                        subSet = locParts.slice(1).join(" ");
+                    } else if (locParts.length === 1) {
+                        mainSet = locParts[0];
+                    }
+
+                    // 提取页数与概要
+                    const pm = afterAtm.match(/(?:^|\s+)(\d+(?:\.\d+)?)(?:\s+|$)/);
+                    if (pm) {
+                        pages = parseFloat(pm[1]);
+                        summary = afterAtm.substring(0, pm.index).trim();
+                    } else {
+                        // 若无明确数字，截取到括号或演员名字前
+                        const sumMatch = afterAtm.match(/^([^\s]+(?:\s*[（\(][^）\)]+[）\)])?)/);
+                        summary = sumMatch ? sumMatch[1].trim() : afterAtm.split(/\s+/)[0];
+                    }
+                } else {
+                    const parts = rest.split(/\s+/).filter(Boolean);
+                    mainSet = parts[0] || "场景";
+                    summary = parts.slice(1).join(" ") || `场次 ${sceneId}`;
+                }
+
+                // 统一清理概要
+                if (!summary) summary = `${mainSet} ${subSet}`.trim() || `场次 ${sceneId}`;
+
+                scenes.push({
+                    order: order,
+                    sceneId: sceneId,
+                    scriptKey: sceneId,
+                    mainSet: mainSet,
+                    subSet: subSet,
+                    atmosphere: atmStr,
+                    summary: summary,
+                    pages: pages,
+                    status: "pending",
+                    cameraParams: { camera: "A机", lens: "", aperture: "", kelvin: "", lighting: "" },
+                    takes: [],
+                    notes: ""
+                });
+            }
+
             return scenes;
         }
 
-        function chunkScriptByScenes(scriptTxt, extractedScenes) {
-            const chunks = {};
-            if (!scriptTxt || extractedScenes.length === 0) return chunks;
+        // ==================== 3. 剧本分集与分场解析引擎 ====================
+        function parseScriptText(text) {
+            const lines = text.split("\n");
+            const scriptDict = {};
+            let currentEp = "全剧剧本";
+            let currentSceneId = null;
+            let currentLines = [];
+            let currentHeader = "";
 
-            const positions = [];
-            extractedScenes.forEach(scene => {
-                // 优化3核心：添加 (?:^|\n) 和 [\s\S] 前瞻边界，防止台词里的 1-1 误触截断
-                const escapedId = scene.id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                const searchRegex = new RegExp(`(?:^|\\n)\\s*(?:第\\s*${escapedId}\\s*场|场次\\s*${escapedId}|${escapedId})[\\s\\S]`, 'i');
-                const match = scriptTxt.match(searchRegex);
-                if (match) {
-                    positions.push({ id: scene.id, index: match.index });
+            function commitCurrentScene() {
+                if (currentSceneId) {
+                    scriptDict[currentSceneId] = {
+                        id: currentSceneId,
+                        episode: currentEp,
+                        header: currentHeader || `场次 ${currentSceneId}`,
+                        lines: currentLines.length > 0 ? currentLines : ["(暂无台词内容)"]
+                    };
+                }
+            }
+
+            for (let rawLine of lines) {
+                const line = rawLine.trim();
+                if (!line) continue;
+
+                // 识别集数: "第一集 我们离婚吧"
+                const epMatch = line.match(/^第([一二三四五六七八九十百0-9]+)集\s*(.*)$/);
+                if (epMatch) {
+                    commitCurrentScene();
+                    currentEp = line;
+                    currentSceneId = null;
+                    currentLines = [];
+                    currentHeader = "";
+                    continue;
+                }
+
+                // 识别场次标记: 如 "38-2", "0-1", "26-2", "38-2 日 外 地下车库"
+                const scMatch = line.match(/^(?:(?:场次|第)?\s*([0-9]+-[0-9]+[A-Za-z]?|[0-9]+[A-Za-z]?)(?:\s*场)?)\s*(?:(?:新闪\s*)?(日|夜|晨|昏|改日|清晨|黄昏|机动)?\s*(内|外|内外)?)?(.*)$/);
+                if (scMatch && (scMatch[1].includes("-") || parseInt(scMatch[1]) < 200)) {
+                    const scId = scMatch[1];
+                    // 确保不是普通数字
+                    if (scId.includes("-") || scMatch[2] || line.length <= 12) {
+                        commitCurrentScene();
+                        currentSceneId = scId;
+                        currentLines = [line];
+                        currentHeader = line;
+                        continue;
+                    }
+                }
+
+                // 归并台词及动作行
+                if (currentSceneId) {
+                    currentLines.push(line);
+                } else if (currentEp && !currentSceneId) {
+                    // 若集数下第一场未写场号（如第一集直接开始），生成集内首场
+                    const epNumM = currentEp.match(/第([一二三四五六七八九十百0-9]+)集/);
+                    if (epNumM) {
+                        currentSceneId = `${epNumM[1]}-1`;
+                        currentLines = [line];
+                        currentHeader = line;
+                    }
+                }
+            }
+            commitCurrentScene();
+            return scriptDict;
+        }
+
+        // ==================== 4. 通告与剧本智能多级匹配引擎 ====================
+        function findMatchingScript(callSheetScene) {
+            if (!callSheetScene) return null;
+            const sceneId = (callSheetScene.sceneId || '').trim();
+
+            // 级别 1: 精确完全匹配 (如 "38-2" -> "38-2")
+            if (appState.scripts[sceneId]) {
+                return {
+                    scriptKey: sceneId,
+                    scriptObj: appState.scripts[sceneId],
+                    matchType: 'exact',
+                    matchDesc: `精确匹配 · 场次 ${sceneId}`
+                };
+            }
+
+            // 级别 2: 子场次母场关联 (如 "13-1A" -> "13-1", "16-1A" -> "16-1")
+            const baseId = sceneId.replace(/[A-Za-z]+$/, '');
+            if (baseId && baseId !== sceneId && appState.scripts[baseId]) {
+                return {
+                    scriptKey: baseId,
+                    scriptObj: appState.scripts[baseId],
+                    matchType: 'subscene',
+                    matchDesc: `子场关联 · 通告 ${sceneId} 联动母场 ${baseId}`
+                };
+            }
+
+            // 级别 3: 数字格式归一化 (如 "第1场" 或 "1")
+            const cleanNum = sceneId.replace(/[^0-9]/g, '');
+            for (const key of Object.keys(appState.scripts)) {
+                if (key === cleanNum || key === `第${cleanNum}场`) {
+                    return {
+                        scriptKey: key,
+                        scriptObj: appState.scripts[key],
+                        matchType: 'numeric',
+                        matchDesc: `场号匹配 · 场次 ${key}`
+                    };
+                }
+            }
+
+            // 级别 4: 关键词与剧情摘要模糊回溯匹配
+            if (callSheetScene.summary && callSheetScene.summary.length >= 3) {
+                const keyword = callSheetScene.summary.replace(/[（\(][^）\)]+[）\)]/g, '').trim();
+                for (const [key, sc] of Object.entries(appState.scripts)) {
+                    const text = sc.lines.join(" ");
+                    if (keyword.length >= 3 && text.includes(keyword)) {
+                        return {
+                            scriptKey: key,
+                            scriptObj: sc,
+                            matchType: 'content',
+                            matchDesc: `内容匹配 · 命中剧本 ${key}`
+                        };
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // ==================== 5. 视图刷新与渲染 ====================
+        function refreshAllViews() {
+            updateProgressHeader();
+            renderScheduleList();
+            renderScriptPanel();
+            renderWorkspacePanel();
+        }
+
+        function updateProgressHeader() {
+            const total = appState.callSheet.length;
+            const done = appState.callSheet.filter(s => s.status === 'done').length;
+            document.getElementById('headerProgressText').textContent = `${done} / ${total} 场`;
+            document.getElementById('headerProgressBar').style.width = total > 0 ? `${(done / total) * 100}%` : '0%';
+        }
+
+        function renderScheduleList() {
+            const container = document.getElementById('scheduleListContainer');
+            if (appState.callSheet.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 px-4 text-slate-500 text-xs">
+                        <i class="fa-solid fa-file-import text-2xl mb-2 block text-cyan-400/50"></i>
+                        请点击右上角导入通告单或点击载入预设示例
+                    </div>`;
+                return;
+            }
+
+            const query = (document.getElementById('scheduleSearchInput').value || '').trim().toLowerCase();
+            const filtered = appState.callSheet.filter(item => {
+                if (appState.statusFilter !== 'ALL' && item.status !== appState.statusFilter) return false;
+                if (query) {
+                    const str = `${item.order} ${item.sceneId} ${item.mainSet} ${item.subSet} ${item.summary}`.toLowerCase();
+                    if (!str.includes(query)) return false;
+                }
+                return true;
+            });
+
+            container.innerHTML = filtered.map(item => {
+                const isSelected = item.order === appState.selectedOrder;
+                let statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-studio-700 text-slate-300">待拍</span>`;
+                if (item.status === 'shooting') statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/20 text-amber-400 font-bold">拍摄中</span>`;
+                else if (item.status === 'done') statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-400 font-bold">已过</span>`;
+                else if (item.status === 'backup') statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-violet-500/20 text-violet-400 font-bold">飞页</span>`;
+
+                // 检查是否有截图
+                const framesCount = (sceneFramesMap[item.sceneId] || []).length;
+                const framesBadge = framesCount > 0 ? `<span class="text-[9px] px-1 rounded bg-cyan-500/20 text-cyan-300"><i class="fa-solid fa-camera mr-0.5"></i>${framesCount}</span>` : '';
+
+                return `
+                <div onclick="selectSceneByOrder(${item.order})" 
+                    class="touch-btn cursor-pointer rounded-xl p-2.5 transition border ${isSelected ? 'bg-studio-800 border-amber-500 shadow-md ring-1 ring-amber-500/40' : 'bg-studio-850/90 hover:bg-studio-800/60 border-studio-800'}">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="px-1.5 py-0.5 rounded bg-studio-950 text-slate-400 font-mono text-[9px]">顺${item.order}</span>
+                            <span class="font-mono font-bold text-sm ${isSelected ? 'text-amber-400' : 'text-white'}">场 ${item.sceneId}</span>
+                            <span class="text-[10px] text-slate-400 font-medium">${item.atmosphere}</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            ${framesBadge}
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    <div class="text-[11px] font-semibold text-slate-200 mb-0.5 flex items-center">
+                        <i class="fa-solid fa-location-dot text-[9px] text-amber-500/80 mr-1"></i>
+                        <span>${item.mainSet} ${item.subSet}</span>
+                        <span class="ml-auto text-[10px] font-mono text-slate-500">${item.pages}页</span>
+                    </div>
+                    <div class="text-xs text-slate-400 truncate">${item.summary}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function selectSceneByOrder(order) {
+            appState.selectedOrder = order;
+            saveAppState();
+            refreshAllViews();
+            if (window.innerWidth < 1024) switchMobileMainTab('script');
+        }
+
+        // ==================== 6. 剧本联动展示渲染 ====================
+        function renderScriptPanel() {
+            const scene = getCurrentScene();
+            const container = document.getElementById('scriptContentContainer');
+            const banner = document.getElementById('activeSceneBanner');
+
+            if (!scene) {
+                banner.innerHTML = `<div class="text-xs text-slate-400">请先在左侧选择场次或导入通告单</div>`;
+                container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">暂无场次信息</div>`;
+                return;
+            }
+
+            // 全剧检索模式
+            if (appState.scriptMode === 'full') {
+                renderFullScriptMode(container, banner);
+                return;
+            }
+
+            // 联动模式：执行多级匹配
+            const match = findMatchingScript(scene);
+
+            if (!match || !match.scriptObj) {
+                banner.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 rounded bg-amber-500 text-studio-950 font-bold text-xs">顺${scene.order} · 场 ${scene.sceneId}</span>
+                            <span class="text-xs text-slate-300">${scene.mainSet} ${scene.subSet}</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 text-xs border border-rose-500/30">剧本未找到对应场次</span>
+                    </div>`;
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-500 text-sm space-y-2">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl text-amber-500/60 block"></i>
+                        <div>未能直接匹配到场次 <span class="text-amber-400 font-mono font-bold">${scene.sceneId}</span> 的剧本台词</div>
+                        <p class="text-xs text-slate-600">请检查导入的剧本中是否标注该场次，或点击上方“全剧检索”手动浏览剧本</p>
+                    </div>`;
+                return;
+            }
+
+            const scriptObj = match.scriptObj;
+            let matchBadgeClass = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+            if (match.matchType === 'subscene') matchBadgeClass = "bg-cyan-500/20 text-cyan-300 border-cyan-500/30";
+            else if (match.matchType === 'content') matchBadgeClass = "bg-amber-500/20 text-amber-300 border-amber-500/30";
+
+            banner.innerHTML = `
+                <div class="flex items-center justify-between flex-wrap gap-1.5">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-0.5 rounded bg-amber-500 text-studio-950 font-bold text-xs">顺${scene.order} · 场 ${scene.sceneId}</span>
+                        <span class="text-xs font-semibold text-white">${scriptObj.episode || ''}</span>
+                        <span class="text-xs text-slate-400 truncate max-w-xs">${scene.summary}</span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded text-[11px] font-medium border ${matchBadgeClass}">
+                        ${match.matchDesc}
+                    </span>
+                </div>`;
+
+            const fontSizeClasses = ['text-xs', 'text-sm', 'text-base', 'text-lg'];
+            const textSizeClass = fontSizeClasses[Math.max(0, Math.min(3, appState.scriptFontSize + 1))];
+
+            // 检查当前场次的通告概要关键词，用于自动聚焦高亮
+            const focusKeywords = [scene.summary, scene.subSet].filter(k => k && k.length >= 2);
+
+            container.innerHTML = scriptObj.lines.map((lineText, lineIdx) => {
+                const annKey = `${match.scriptKey}_${lineIdx}`;
+                const hlClass = (appState.lineAnnotations[annKey] || {}).highlight || '';
+
+                // 动作指导行 (以 △ 开头)
+                const isAction = lineText.startsWith('△');
+                // 台词对话行 (包含冒号)
+                const isDialogue = lineText.includes('：') || lineText.includes(':');
+
+                // 检查是否与通告单内容焦点匹配
+                let isFocusLine = false;
+                for (let kw of focusKeywords) {
+                    if (kw.length >= 3 && lineText.includes(kw)) {
+                        isFocusLine = true;
+                        break;
+                    }
+                }
+
+                let typographyClass = "text-slate-200";
+                if (isAction) {
+                    typographyClass = "text-cyan-300/90 italic";
+                } else if (isDialogue) {
+                    typographyClass = "text-slate-100";
+                }
+
+                return `
+                <div onclick="openLineAnnotationPopover(event, '${match.scriptKey}', ${lineIdx})" 
+                    class="cursor-pointer rounded-lg px-2.5 py-1.5 transition hover:bg-studio-800/80 relative ${hlClass} ${isFocusLine ? 'hl-focus' : ''}">
+                    ${isFocusLine ? '<span class="absolute -top-1.5 right-2 px-1.5 py-0.2 rounded bg-amber-500 text-studio-950 font-bold text-[9px]">🎯 通告焦点</span>' : ''}
+                    <p class="${textSizeClass} ${typographyClass} leading-relaxed selectable-text">
+                        ${escapeHtml(lineText)}
+                    </p>
+                </div>`;
+            }).join('');
+        }
+
+        function renderFullScriptMode(container, banner) {
+            banner.innerHTML = `<div class="text-xs text-cyan-300 font-bold">全剧检索模式 (浏览全剧所有场次与台词)</div>`;
+            const query = (document.getElementById('fullScriptSearchInput').value || '').trim().toLowerCase();
+
+            const allKeys = Object.keys(appState.scripts);
+            if (allKeys.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">尚未导入剧本</div>`;
+                return;
+            }
+
+            let html = "";
+            allKeys.forEach(k => {
+                const sc = appState.scripts[k];
+                const contentStr = sc.lines.join("\n");
+                if (query && !contentStr.toLowerCase().includes(query) && !k.toLowerCase().includes(query)) {
+                    return;
+                }
+                html += `
+                <div class="bg-studio-900/60 p-3 rounded-2xl border border-studio-800 space-y-2 mb-3">
+                    <div class="flex items-center justify-between border-b border-studio-800 pb-1.5">
+                        <span class="font-bold text-amber-400 font-mono text-xs">场次 ${k}</span>
+                        <span class="text-[11px] text-slate-400">${sc.episode || ''}</span>
+                    </div>
+                    <div class="space-y-1 text-xs text-slate-300">
+                        ${sc.lines.map(l => `<p class="leading-relaxed">${escapeHtml(l)}</p>`).join('')}
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html || `<div class="text-center py-12 text-slate-500 text-sm">未搜索到相关台词</div>`;
+        }
+
+        function setScriptMode(mode) {
+            appState.scriptMode = mode;
+            const btnMatched = document.getElementById('scriptMode-matched');
+            const btnFull = document.getElementById('scriptMode-full');
+            const searchBox = document.getElementById('fullScriptSearchBox');
+
+            if (mode === 'matched') {
+                btnMatched.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-studio-950 transition flex items-center space-x-1.5";
+                btnFull.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition flex items-center space-x-1.5";
+                searchBox.classList.add('hidden');
+            } else {
+                btnFull.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-cyan-500 text-studio-950 transition flex items-center space-x-1.5";
+                btnMatched.className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition flex items-center space-x-1.5";
+                searchBox.classList.remove('hidden');
+            }
+            renderScriptPanel();
+        }
+
+        function adjustScriptFontSize(delta) {
+            appState.scriptFontSize = Math.max(-1, Math.min(2, appState.scriptFontSize + delta));
+            const labels = ["小", "标准", "大", "特大"];
+            document.getElementById('fontSizeIndicator').textContent = labels[appState.scriptFontSize + 1];
+            renderScriptPanel();
+        }
+
+        function scrollToTopOfScript() {
+            document.getElementById('scriptContentContainer').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ==================== 7. 现场工作区 (参数、打板、截图与笔记) ====================
+        function renderWorkspacePanel() {
+            const scene = getCurrentScene();
+            if (!scene) return;
+
+            document.getElementById('wsSceneCodeLabel').textContent = `顺${scene.order} · 场 ${scene.sceneId}`;
+
+            // 状态高亮
+            ['pending', 'shooting', 'done', 'backup'].forEach(st => {
+                const btn = document.getElementById(`statusOpt-${st}`);
+                if (btn) {
+                    const active = scene.status === st;
+                    btn.classList.toggle('bg-studio-700', active);
+                    btn.classList.toggle('ring-1', active);
+                    btn.classList.toggle('ring-amber-400', active);
                 }
             });
 
-            positions.sort((a, b) => a.index - b.index);
-            for (let i = 0; i < positions.length; i++) {
-                const curr = positions[i];
-                const next = positions[i + 1];
-                const startIdx = curr.index;
-                const endIdx = next ? next.index : scriptTxt.length;
-                chunks[curr.id] = scriptTxt.substring(startIdx, endIdx).trim();
-            }
-            return chunks;
+            // 摄影参数填充
+            const cp = scene.cameraParams || {};
+            document.getElementById('camInput-camera').value = cp.camera || '';
+            document.getElementById('camInput-lens').value = cp.lens || '';
+            document.getElementById('camInput-aperture').value = cp.aperture || '';
+            document.getElementById('camInput-kelvin').value = cp.kelvin || '';
+            document.getElementById('camInput-lighting').value = cp.lighting || '';
+
+            // 笔记填充
+            document.getElementById('sceneNoteTextarea').value = scene.notes || '';
+
+            // 打板列表填充
+            renderTakesList();
+
+            // 截图图库填充
+            renderFramesGallery();
         }
 
+        function updateCurrentSceneStatus(status) {
+            const sc = getCurrentScene();
+            if (!sc) return;
+            sc.status = status;
+            saveAppState();
+            refreshAllViews();
+            showToast(`场次状态已更新为: ${getStatusText(status)}`);
+        }
+
+        function getStatusText(st) {
+            switch (st) {
+                case 'pending': return '待拍';
+                case 'shooting': return '拍摄中';
+                case 'done': return '已过';
+                case 'backup': return '飞页';
+                default: return st;
+            }
+        }
+
+        function saveCameraParams() {
+            const sc = getCurrentScene();
+            if (!sc) return;
+            sc.cameraParams = {
+                camera: document.getElementById('camInput-camera').value,
+                lens: document.getElementById('camInput-lens').value,
+                aperture: document.getElementById('camInput-aperture').value,
+                kelvin: document.getElementById('camInput-kelvin').value,
+                lighting: document.getElementById('camInput-lighting').value
+            };
+            saveAppState();
+        }
+
+        function saveSceneNotes() {
+            const sc = getCurrentScene();
+            if (!sc) return;
+            sc.notes = document.getElementById('sceneNoteTextarea').value;
+            saveAppState();
+        }
+
+        function insertTimestampToNote() {
+            const ta = document.getElementById('sceneNoteTextarea');
+            const now = new Date();
+            const timeStr = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}] `;
+            const pos = ta.selectionStart || ta.value.length;
+            ta.value = ta.value.substring(0, pos) + timeStr + ta.value.substring(pos);
+            saveSceneNotes();
+            ta.focus();
+        }
+
+        // 打板记录
+        function addQuickTake() {
+            const scene = getCurrentScene();
+            if (!scene) return;
+            if (!scene.takes) scene.takes = [];
+
+            const shot = document.getElementById('newTakeShot').value || `${scene.takes.length + 1}镜`;
+            const num = document.getElementById('newTakeNum').value || `${scene.takes.length + 1}次`;
+            const result = document.getElementById('newTakeResult').value;
+            const comment = document.getElementById('newTakeComment').value;
+
+            const now = new Date();
+            const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            scene.takes.push({ shot, take: num, result, comment, time });
+            saveAppState();
+            renderTakesList();
+
+            // 自动将下一个次数递增
+            const curTakeNum = parseInt(num) || 1;
+            document.getElementById('newTakeNum').value = `${curTakeNum + 1}次`;
+            document.getElementById('newTakeComment').value = '';
+            showToast(`已记录打板: ${shot} ${num} (${result})`);
+        }
+
+        function deleteTake(idx) {
+            const scene = getCurrentScene();
+            if (!scene || !scene.takes) return;
+            scene.takes.splice(idx, 1);
+            saveAppState();
+            renderTakesList();
+        }
+
+        function renderTakesList() {
+            const scene = getCurrentScene();
+            const takes = (scene && scene.takes) || [];
+            document.getElementById('badgeTakesCount').textContent = takes.length;
+            const container = document.getElementById('takesListContainer');
+
+            if (takes.length === 0) {
+                container.innerHTML = `<div class="text-center py-3 text-[11px] text-slate-500">本场暂无打板记录，点击“记一条”开始记录</div>`;
+                return;
+            }
+
+            container.innerHTML = takes.map((t, idx) => {
+                let badge = `<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">保 OK</span>`;
+                if (t.result === 'NG') badge = `<span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold text-[10px]">NG</span>`;
+                if (t.result === 'BACKUP') badge = `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[10px]">备选</span>`;
+
+                return `
+                <div class="flex items-center justify-between bg-studio-900 px-2.5 py-1.5 rounded-lg border border-studio-800 text-[11px]">
+                    <div class="flex items-center space-x-1.5 truncate">
+                        <span class="font-mono font-bold text-amber-400">${escapeHtml(t.shot)}-${escapeHtml(t.take)}</span>
+                        ${badge}
+                        <span class="text-slate-300 truncate">${escapeHtml(t.comment || '')}</span>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <span class="text-[10px] font-mono text-slate-500">${t.time || ''}</span>
+                        <button onclick="deleteTake(${idx})" class="text-slate-500 hover:text-rose-400"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ==================== 8. 截图上传与画板 (APPLE PENCIL RETINA CANVAS) ====================
+        let annotatorCanvas = null;
+        let annotatorCtx = null;
+        let currentDrawTool = 'pen';
+        let currentDrawColor = '#f59e0b';
+        let isDrawing = false;
+        let drawHistory = [];
+        let dpr = 1;
+
+        function initAnnotatorCanvas() {
+            annotatorCanvas = document.getElementById('annotatorCanvas');
+            annotatorCtx = annotatorCanvas.getContext('2d');
+            dpr = window.devicePixelRatio || 2;
+
+            const getLogicalPos = (e) => {
+                const rect = annotatorCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            };
+
+            const startDraw = (e) => {
+                e.preventDefault();
+                isDrawing = true;
+                const pos = getLogicalPos(e);
+                annotatorCanvas.lastX = pos.x;
+                annotatorCanvas.lastY = pos.y;
+                saveCanvasStateToHistory();
+
+                if (currentDrawTool === 'pen') {
+                    annotatorCtx.beginPath();
+                    annotatorCtx.moveTo(pos.x, pos.y);
+                }
+            };
+
+            const moveDraw = (e) => {
+                if (!isDrawing) return;
+                e.preventDefault();
+                const pos = getLogicalPos(e);
+
+                if (currentDrawTool === 'pen') {
+                    annotatorCtx.strokeStyle = currentDrawColor;
+                    annotatorCtx.lineWidth = 3;
+                    annotatorCtx.lineCap = 'round';
+                    annotatorCtx.lineJoin = 'round';
+                    annotatorCtx.lineTo(pos.x, pos.y);
+                    annotatorCtx.stroke();
+                }
+            };
+
+            const endDraw = (e) => {
+                if (!isDrawing) return;
+                isDrawing = false;
+                const pos = getLogicalPos(e);
+
+                if (currentDrawTool === 'arrow') {
+                    drawArrow(annotatorCtx, annotatorCanvas.lastX, annotatorCanvas.lastY, pos.x, pos.y, currentDrawColor);
+                }
+            };
+
+            annotatorCanvas.addEventListener('pointerdown', startDraw);
+            annotatorCanvas.addEventListener('pointermove', moveDraw);
+            window.addEventListener('pointerup', endDraw);
+        }
+
+        function setupRetinaCanvas(logicalWidth, logicalHeight) {
+            annotatorCanvas.width = logicalWidth * dpr;
+            annotatorCanvas.height = logicalHeight * dpr;
+            annotatorCanvas.style.width = `${logicalWidth}px`;
+            annotatorCanvas.style.height = `${logicalHeight}px`;
+            annotatorCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+            annotatorCtx.scale(dpr, dpr);
+            drawHistory = [];
+        }
+
+        function saveCanvasStateToHistory() {
+            if (drawHistory.length > 20) drawHistory.shift();
+            drawHistory.push(annotatorCtx.getImageData(0, 0, annotatorCanvas.width, annotatorCanvas.height));
+        }
+
+        function undoCanvasStroke() {
+            if (drawHistory.length > 0) {
+                const prev = drawHistory.pop();
+                annotatorCtx.putImageData(prev, 0, 0);
+            }
+        }
+
+        function drawArrow(ctx, fromx, fromy, tox, toy, color) {
+            const headlen = 12;
+            const dx = tox - fromx;
+            const dy = toy - fromy;
+            const angle = Math.atan2(dy, dx);
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(fromx, fromy);
+            ctx.lineTo(tox, toy);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(tox, toy);
+            ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function stampIconOnCanvas(text) {
+            saveCanvasStateToHistory();
+            const logW = parseFloat(annotatorCanvas.style.width) || 720;
+            const logH = parseFloat(annotatorCanvas.style.height) || 405;
+            const x = logW / 2 - 35;
+            const y = logH / 2;
+
+            annotatorCtx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            annotatorCtx.strokeStyle = currentDrawColor;
+            annotatorCtx.lineWidth = 2;
+            annotatorCtx.beginPath();
+            annotatorCtx.roundRect(x - 5, y - 18, 80, 26, 6);
+            annotatorCtx.fill();
+            annotatorCtx.stroke();
+
+            annotatorCtx.fillStyle = '#ffffff';
+            annotatorCtx.font = 'bold 12px sans-serif';
+            annotatorCtx.fillText(text, x + 2, y);
+            showToast(`已在画布中央盖上标签: ${text}`);
+        }
+
+        function openAnnotatorWithMonitorTemplate() {
+            const scene = getCurrentScene();
+            if (!scene) return;
+            document.getElementById('annotatorSceneBadge').textContent = `场 ${scene.sceneId}`;
+            document.getElementById('annotatorCaptionInput').value = `机位与光位草图 · 顺${scene.order}`;
+
+            const modal = document.getElementById('annotatorModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            const logW = Math.min(window.innerWidth - 40, 840);
+            const logH = Math.round(logW * 9 / 16);
+            setupRetinaCanvas(logW, logH);
+
+            const ctx = annotatorCtx;
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, logW, logH);
+
+            // 绘制九宫格与安全框辅助线
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(logW / 3, 0); ctx.lineTo(logW / 3, logH); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(logW * 2 / 3, 0); ctx.lineTo(logW * 2 / 3, logH); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, logH / 3); ctx.lineTo(logW, logH / 3); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, logH * 2 / 3); ctx.lineTo(logW, logH * 2 / 3); ctx.stroke();
+
+            // 监视器 OSD 信息
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 12px monospace';
+            ctx.fillText(`REC ● 顺${scene.order} 场次:${scene.sceneId} [${scene.atmosphere}]`, 14, 24);
+        }
+
+        function openAnnotatorWithExistingFrame(idx) {
+            const scene = getCurrentScene();
+            if (!scene) return;
+            const frames = sceneFramesMap[scene.sceneId] || [];
+            const frame = frames[idx];
+            if (!frame) return;
+
+            document.getElementById('annotatorSceneBadge').textContent = `场 ${scene.sceneId}`;
+            document.getElementById('annotatorCaptionInput').value = frame.caption || '';
+
+            const modal = document.getElementById('annotatorModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            const img = new Image();
+            img.onload = () => {
+                const logW = Math.min(window.innerWidth - 40, 840);
+                const logH = Math.round(logW * (img.height / img.width));
+                setupRetinaCanvas(logW, logH);
+                annotatorCtx.drawImage(img, 0, 0, logW, logH);
+            };
+            img.src = frame.dataUrl;
+        }
+
+        function saveAnnotatedCanvas() {
+            const dataUrl = annotatorCanvas.toDataURL('image/jpeg', 0.88);
+            const scene = getCurrentScene();
+            if (!scene) return;
+            if (!sceneFramesMap[scene.sceneId]) sceneFramesMap[scene.sceneId] = [];
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            sceneFramesMap[scene.sceneId].unshift({
+                id: Date.now(),
+                dataUrl: dataUrl,
+                caption: document.getElementById('annotatorCaptionInput').value || '机位批注草图',
+                timestamp: timeStr
+            });
+
+            saveFramesToStorage();
+            closeModal('annotatorModal');
+            renderScheduleList();
+            renderFramesGallery();
+            showToast("已保存高清视网膜机位截图");
+        }
+
+        function handleScreenshotUpload(event) {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+            const scene = getCurrentScene();
+            if (!scene) return;
+            if (!sceneFramesMap[scene.sceneId]) sceneFramesMap[scene.sceneId] = [];
+
+            let processed = 0;
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // 缩放压缩至 1280 宽度，确保 iPad 性能流畅
+                        const canvas = document.createElement('canvas');
+                        const maxW = 1280;
+                        const scale = img.width > maxW ? maxW / img.width : 1;
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                        const now = new Date();
+                        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+                        sceneFramesMap[scene.sceneId].unshift({
+                            id: Date.now() + Math.random(),
+                            dataUrl: compressedDataUrl,
+                            caption: file.name.replace(/\.[^/.]+$/, ""),
+                            timestamp: timeStr
+                        });
+
+                        processed++;
+                        if (processed === files.length) {
+                            saveFramesToStorage();
+                            renderScheduleList();
+                            renderFramesGallery();
+                            showToast(`成功导入 ${files.length} 张摄影机截图`);
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function deleteFrame(idx) {
+            const scene = getCurrentScene();
+            if (!scene || !sceneFramesMap[scene.sceneId]) return;
+            sceneFramesMap[scene.sceneId].splice(idx, 1);
+            saveFramesToStorage();
+            renderScheduleList();
+            renderFramesGallery();
+            showToast("已删除截图");
+        }
+
+        function renderFramesGallery() {
+            const scene = getCurrentScene();
+            const gallery = document.getElementById('framesGalleryContainer');
+            if (!scene) return;
+            const frames = sceneFramesMap[scene.sceneId] || [];
+
+            if (frames.length === 0) {
+                gallery.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs">
+                        <i class="fa-solid fa-camera text-2xl mb-1.5 block text-slate-600"></i>
+                        <span>本场暂未导入截图</span>
+                    </div>`;
+                return;
+            }
+
+            gallery.innerHTML = frames.map((f, idx) => `
+                <div class="bg-studio-850 rounded-2xl border border-studio-700/80 overflow-hidden shadow-md">
+                    <div class="relative bg-black aspect-video flex items-center justify-center cursor-pointer" onclick="openAnnotatorWithExistingFrame(${idx})">
+                        <img src="${f.dataUrl}" class="w-full h-full object-contain">
+                        <div class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/75 text-[10px] font-mono text-cyan-300">
+                            ${escapeHtml(f.timestamp || '')}
+                        </div>
+                        <div class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-amber-500 text-studio-950 font-bold text-[10px] flex items-center space-x-1 shadow">
+                            <i class="fa-solid fa-pen-nib"></i><span>点击批注</span>
+                        </div>
+                    </div>
+                    <div class="p-2 flex items-center justify-between text-xs">
+                        <span class="text-slate-200 truncate flex-1 mr-2">${escapeHtml(f.caption || '机位截图')}</span>
+                        <button onclick="deleteFrame(${idx})" class="text-slate-400 hover:text-rose-400 p-1"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>`).join('');
+        }
+
+        function setDrawTool(tool) {
+            currentDrawTool = tool;
+            document.querySelectorAll('.draw-tool-btn').forEach(b => {
+                b.classList.replace('bg-amber-500', 'bg-studio-800');
+                b.classList.replace('text-studio-950', 'text-slate-200');
+            });
+            const activeBtn = document.getElementById(`toolBtn-${tool}`);
+            if (activeBtn) {
+                activeBtn.classList.replace('bg-studio-800', 'bg-amber-500');
+                activeBtn.classList.replace('text-slate-200', 'text-studio-950');
+            }
+        }
+
+        function setDrawColor(color, el) {
+            currentDrawColor = color;
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-white'));
+            if (el) el.classList.add('ring-2', 'ring-white');
+        }
+
+        function closeAnnotatorModal() {
+            closeModal('annotatorModal');
+        }
+
+        // ==================== 9. 台词标记 POPOVER ====================
+        let activeLineTarget = null;
+        function openLineAnnotationPopover(e, scriptKey, lineIndex) {
+            e.stopPropagation();
+            activeLineTarget = { scriptKey, lineIndex };
+            const popover = document.getElementById('linePopover');
+            popover.classList.remove('hidden');
+            popover.style.left = `${Math.min(window.innerWidth - 280, e.clientX)}px`;
+            popover.style.top = `${e.clientY + 10}px`;
+        }
+
+        function closeLinePopover() {
+            document.getElementById('linePopover').classList.add('hidden');
+        }
+
+        function applyLineHighlight(hlClass) {
+            if (!activeLineTarget) return;
+            const key = `${activeLineTarget.scriptKey}_${activeLineTarget.lineIndex}`;
+            if (!appState.lineAnnotations[key]) appState.lineAnnotations[key] = {};
+            appState.lineAnnotations[key].highlight = hlClass;
+            saveAppState();
+            renderScriptPanel();
+            closeLinePopover();
+        }
+
+        // ==================== 10. 文件导入主流程 ====================
         function updateFileName(inputId, labelId) {
             const file = document.getElementById(inputId).files[0];
             if (file) {
@@ -551,336 +1576,68 @@
             spinner.classList.add('fa-spin');
 
             try {
-                // 提取通告文本
-                let csText = callSheetFile.type === 'application/pdf' ? await extractTextFromPdf(callSheetFile) : await (callSheetFile.name.endsWith('.docx') ? extractTextFromDocx(callSheetFile) : callSheetFile.text());
-                
-                // 提取剧本文本
-                let spText = "";
-                if (scriptFile) {
-                    spText = scriptFile.type === 'application/pdf' ? await extractTextFromPdf(scriptFile) : await (scriptFile.name.endsWith('.docx') ? extractTextFromDocx(scriptFile) : scriptFile.text());
-                }
+                // 1. 读取通告单并解析表格场次
+                const csText = await readFileAsText(callSheetFile);
+                const parsedCallSheet = parseCallSheetText(csText);
 
-                const scenes = parseSceneIds(csText);
-                if (scenes.length === 0) {
-                    showToast("未发现场次号，请确保排版包含类似 '1-1' 格式的字样");
+                if (parsedCallSheet.length === 0) {
+                    showToast("未在通告单中解析到有效场次，请确保包含形如 '1 38-2' 或 '38-2' 格式");
                     spinner.classList.replace('fa-spinner', 'fa-rocket');
                     spinner.classList.remove('fa-spin');
                     return;
                 }
 
-                // 切割剧本
-                const chunks = chunkScriptByScenes(spText, scenes);
+                appState.callSheet = parsedCallSheet;
 
-                // 映射到工作台数据结构
-                appState.callSheet = scenes.map((s, idx) => ({
-                    order: idx + 1,
-                    sceneId: s.id,
-                    scriptKey: s.id,
-                    mainSet: "导入提取",
-                    subSet: "解析场景",
-                    atmosphere: "机动",
-                    pages: 0,
-                    summary: "自动解析场次",
-                    cast: [],
-                    props: "",
-                    timeSlot: "-",
-                    status: "pending",
-                    cameraParams: { camera: "A机", lens: "", aperture: "", kelvin: "", lighting: "" },
-                    takes: [],
-                    notes: ""
-                }));
-
-                appState.scripts = {};
-                for (const [id, text] of Object.entries(chunks)) {
-                    appState.scripts[id] = {
-                        title: `场次 ${id}`,
-                        episode: "导入剧本片段",
-                        lines: text.split('\n').filter(l => l.trim().length > 0)
-                    };
+                // 2. 读取剧本并解析分场
+                if (scriptFile) {
+                    const spText = await readFileAsText(scriptFile);
+                    appState.scripts = parseScriptText(spText);
                 }
 
-                appState.selectedOrder = 1;
+                appState.selectedOrder = appState.callSheet[0].order;
                 saveAppState();
-                
+
                 closeModal('importModal');
                 refreshAllViews();
-                showToast(`成功解析 ${scenes.length} 场戏！`);
+                showToast(`成功解析 ${parsedCallSheet.length} 场戏并建立联动！`);
 
-            } catch (error) {
-                console.error(error);
-                showToast("解析出错，请确保是标准的PDF/Word文档");
+            } catch (err) {
+                console.error("解析文件失败:", err);
+                showToast("文件解析出错，请确认格式是否正确");
             }
 
             spinner.classList.replace('fa-spinner', 'fa-rocket');
             spinner.classList.remove('fa-spin');
         }
 
-        // ==================== UI RENDERING ====================
-        function refreshAllViews() {
-            updateProgressHeader();
-            renderScheduleList();
-            renderScriptPanel();
-            renderWorkspacePanel();
-        }
+        // ==================== 11. 载入预设示例数据 (一键测试) ====================
+        function loadSampleDataset() {
+            appState.callSheet = SAMPLE_CALL_SHEET.map(item => ({
+                order: item.order,
+                sceneId: item.sceneId,
+                scriptKey: item.sceneId,
+                mainSet: item.mainSet,
+                subSet: item.subSet,
+                atmosphere: item.atmosphere,
+                summary: item.summary,
+                pages: item.pages,
+                status: "pending",
+                cameraParams: { camera: "ARRI Mini LF", lens: "35mm T2.0", aperture: "T2.8", kelvin: "5600K", lighting: "窗外M18打冷光" },
+                takes: [],
+                notes: ""
+            }));
 
-        function updateProgressHeader() {
-            const total = appState.callSheet.length;
-            const done = appState.callSheet.filter(s => s.status === 'done').length;
-            document.getElementById('headerProgressText').textContent = `${done} / ${total} 场`;
-            document.getElementById('headerProgressBar').style.width = total > 0 ? `${(done/total)*100}%` : '0%';
-        }
-
-        function renderScheduleList() {
-            const container = document.getElementById('scheduleListContainer');
-            if (appState.callSheet.length === 0) return;
-
-            const query = (document.getElementById('scheduleSearchInput').value || '').trim().toLowerCase();
-            const filtered = appState.callSheet.filter(item => {
-                if (appState.statusFilter !== 'ALL' && item.status !== appState.statusFilter) return false;
-                if (query && !`${item.sceneId} ${item.summary}`.toLowerCase().includes(query)) return false;
-                return true;
-            });
-
-            container.innerHTML = filtered.map(item => {
-                const isSelected = item.order === appState.selectedOrder;
-                let statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-studio-700 text-slate-300">待拍</span>`;
-                if (item.status === 'shooting') statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/20 text-amber-400">拍摄中</span>`;
-                else if (item.status === 'done') statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-400">已过</span>`;
-
-                return `
-                <div onclick="selectSceneByOrder(${item.order})" 
-                    class="touch-btn cursor-pointer rounded-xl p-2.5 transition border ${isSelected ? 'bg-studio-800 border-amber-500 shadow-md' : 'bg-studio-850/90 border-studio-800'}">
-                    <div class="flex items-center justify-between mb-1">
-                        <div class="flex items-center space-x-1.5">
-                            <span class="px-1.5 py-0.5 rounded bg-studio-950 text-slate-400 font-mono text-[9px]">顺${item.order}</span>
-                            <span class="font-mono font-bold text-sm ${isSelected ? 'text-amber-400' : 'text-white'}">场 ${item.sceneId}</span>
-                        </div>
-                        ${statusBadge}
-                    </div>
-                    <div class="text-xs text-slate-300 truncate">${item.summary}</div>
-                </div>`;
-            }).join('');
-        }
-
-        function selectSceneByOrder(order) {
-            appState.selectedOrder = order;
+            appState.scripts = parseScriptText(SAMPLE_FULL_SCRIPT);
+            appState.selectedOrder = 1;
             saveAppState();
+
+            closeModal('importModal');
             refreshAllViews();
-            if (window.innerWidth < 1024) switchMobileMainTab('script');
+            showToast("已成功载入《我告白的第十年》24场通告与全集剧本！");
         }
 
-        function renderScriptPanel() {
-            const scene = getCurrentScene();
-            const container = document.getElementById('scriptContentContainer');
-            const banner = document.getElementById('activeSceneBanner');
-
-            if (!scene) {
-                banner.innerHTML = `<div class="text-xs text-slate-400">请导入通告单</div>`;
-                return;
-            }
-
-            banner.innerHTML = `<div class="flex justify-between items-center"><span class="px-2.5 py-1 rounded bg-amber-500 text-studio-950 font-bold text-xs">当前: 场次 ${scene.sceneId}</span></div>`;
-
-            const scriptObj = appState.scripts[scene.scriptKey];
-            if (!scriptObj) {
-                container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">未能匹配到场次 ${scene.sceneId} 的剧本内容，请确认剧本中包含该场次。</div>`;
-                return;
-            }
-
-            const fontSizeClasses = ['text-xs', 'text-sm', 'text-base', 'text-lg'];
-            const textSizeClass = fontSizeClasses[Math.max(0, Math.min(3, appState.scriptFontSize + 1))];
-
-            container.innerHTML = scriptObj.lines.map((lineText, lineIdx) => {
-                const annKey = `${scene.scriptKey}_${lineIdx}`;
-                const hlClass = (appState.lineAnnotations[annKey] || {}).highlight || '';
-                return `<div onclick="openLineAnnotationPopover(event, '${scene.scriptKey}', ${lineIdx})" class="cursor-pointer rounded px-2 py-1.5 transition hover:bg-studio-800/80 ${hlClass}">
-                    <p class="${textSizeClass} leading-relaxed text-slate-200">${escapeHtml(lineText)}</p>
-                </div>`;
-            }).join('');
-        }
-
-        function renderWorkspacePanel() {
-            const scene = getCurrentScene();
-            if(!scene) return;
-            document.getElementById('wsSceneCodeLabel').textContent = `顺${scene.order} · 场 ${scene.sceneId}`;
-            ['pending', 'shooting', 'done', 'backup'].forEach(st => {
-                const btn = document.getElementById(`statusOpt-${st}`);
-                btn.classList.toggle('bg-studio-700', scene.status === st);
-                btn.classList.toggle('ring-1', scene.status === st);
-                btn.classList.toggle('ring-amber-400', scene.status === st);
-            });
-
-            const cp = scene.cameraParams || {};
-            document.getElementById('camInput-camera').value = cp.camera || '';
-            document.getElementById('camInput-lens').value = cp.lens || '';
-            document.getElementById('camInput-aperture').value = cp.aperture || '';
-            document.getElementById('camInput-kelvin').value = cp.kelvin || '';
-            document.getElementById('camInput-lighting').value = cp.lighting || '';
-            document.getElementById('sceneNoteTextarea').value = scene.notes || '';
-            
-            renderFramesGallery();
-        }
-
-        // ==================== OPTIMIZATION 2: RETINA CANVAS FOR APPLE PENCIL ====================
-        let annotatorCanvas = null;
-        let annotatorCtx = null;
-        let currentDrawTool = 'pen';
-        let currentDrawColor = '#f59e0b';
-        let isDrawing = false;
-        let lastX = 0, lastY = 0;
-        let dpr = 1; // Device Pixel Ratio for Retina
-
-        function initAnnotatorCanvas() {
-            annotatorCanvas = document.getElementById('annotatorCanvas');
-            annotatorCtx = annotatorCanvas.getContext('2d');
-            dpr = window.devicePixelRatio || 1; // 抓取 iPad mini 的像素倍率(通常是 2)
-
-            const getLogicalPos = (e) => {
-                const rect = annotatorCanvas.getBoundingClientRect();
-                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                // 返回相对于逻辑像素的坐标 (无视物理分辨率)
-                return {
-                    x: clientX - rect.left,
-                    y: clientY - rect.top
-                };
-            };
-
-            const startDraw = (e) => {
-                e.preventDefault();
-                isDrawing = true;
-                const pos = getLogicalPos(e);
-                lastX = pos.x; lastY = pos.y;
-                if(currentDrawTool === 'pen') {
-                    annotatorCtx.beginPath();
-                    annotatorCtx.moveTo(lastX, lastY);
-                }
-            };
-
-            const moveDraw = (e) => {
-                if (!isDrawing) return;
-                e.preventDefault();
-                const pos = getLogicalPos(e);
-                if (currentDrawTool === 'pen') {
-                    annotatorCtx.strokeStyle = currentDrawColor;
-                    annotatorCtx.lineWidth = 3;
-                    annotatorCtx.lineCap = 'round';
-                    annotatorCtx.lineJoin = 'round';
-                    annotatorCtx.lineTo(pos.x, pos.y);
-                    annotatorCtx.stroke();
-                }
-            };
-
-            const endDraw = (e) => {
-                if(isDrawing) isDrawing = false;
-            };
-
-            annotatorCanvas.addEventListener('pointerdown', startDraw);
-            annotatorCanvas.addEventListener('pointermove', moveDraw);
-            window.addEventListener('pointerup', endDraw);
-        }
-
-        function setupRetinaCanvas(logicalWidth, logicalHeight) {
-            // 优化2核心：让 Canvas 的物理像素匹配屏幕 DPI，CSS 尺寸保持逻辑大小
-            annotatorCanvas.width = logicalWidth * dpr;
-            annotatorCanvas.height = logicalHeight * dpr;
-            annotatorCanvas.style.width = `${logicalWidth}px`;
-            annotatorCanvas.style.height = `${logicalHeight}px`;
-            annotatorCtx.scale(dpr, dpr); // 缩放绘图上下文，之后的绘图指令使用逻辑尺寸即可
-        }
-
-        function openAnnotatorWithMonitorTemplate() {
-            const scene = getCurrentScene();
-            if(!scene) return;
-            document.getElementById('annotatorSceneBadge').textContent = `场 ${scene.sceneId}`;
-            const modal = document.getElementById('annotatorModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            const logW = Math.min(window.innerWidth - 60, 800);
-            const logH = logW * 9 / 16;
-            setupRetinaCanvas(logW, logH);
-
-            const ctx = annotatorCtx;
-            ctx.fillStyle = '#10141d';
-            ctx.fillRect(0, 0, logW, logH);
-            
-            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-            ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(logW/3, 0); ctx.lineTo(logW/3, logH); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(logW*2/3, 0); ctx.lineTo(logW*2/3, logH); ctx.stroke();
-            
-            ctx.fillStyle = '#f59e0b';
-            ctx.font = '12px monospace';
-            ctx.fillText(`REC ● SCENE: ${scene.sceneId}`, 10, 20);
-        }
-
-        function saveAnnotatedCanvas() {
-            // 保存全分辨率的高清图片
-            const dataUrl = annotatorCanvas.toDataURL('image/jpeg', 0.9);
-            const scene = getCurrentScene();
-            if (!sceneFramesMap[scene.sceneId]) sceneFramesMap[scene.sceneId] = [];
-            sceneFramesMap[scene.sceneId].unshift({
-                dataUrl: dataUrl,
-                caption: document.getElementById('annotatorCaptionInput').value || '机位草图',
-                timestamp: new Date().toLocaleTimeString('it-IT').substring(0,5)
-            });
-            closeModal('annotatorModal');
-            renderFramesGallery();
-            showToast("已保存高清视网膜画板");
-        }
-
-        // ==================== UTIL FUNCTIONS ====================
-        let activeLineAnnotationTarget = null;
-        function openLineAnnotationPopover(e, scriptKey, lineIndex) {
-            e.stopPropagation();
-            activeLineAnnotationTarget = { scriptKey, lineIndex };
-            const popover = document.getElementById('linePopover');
-            popover.classList.remove('hidden');
-            popover.style.left = `${Math.min(window.innerWidth - 280, e.clientX)}px`;
-            popover.style.top = `${e.clientY + 10}px`;
-        }
-        function closeLinePopover() { document.getElementById('linePopover').classList.add('hidden'); }
-        function applyLineHighlight(hlClass) {
-            if(!activeLineAnnotationTarget) return;
-            const key = `${activeLineAnnotationTarget.scriptKey}_${activeLineAnnotationTarget.lineIndex}`;
-            if (!appState.lineAnnotations[key]) appState.lineAnnotations[key] = {};
-            appState.lineAnnotations[key].highlight = hlClass;
-            saveAppState(); renderScriptPanel(); closeLinePopover();
-        }
-
-        function updateCurrentSceneStatus(st) {
-            const sc = getCurrentScene(); if(!sc) return;
-            sc.status = st; saveAppState(); refreshAllViews();
-        }
-        function saveCameraParams() {
-            const sc = getCurrentScene(); if(!sc) return;
-            sc.cameraParams = {
-                camera: document.getElementById('camInput-camera').value,
-                lens: document.getElementById('camInput-lens').value,
-                aperture: document.getElementById('camInput-aperture').value,
-                kelvin: document.getElementById('camInput-kelvin').value,
-                lighting: document.getElementById('camInput-lighting').value
-            }; saveAppState();
-        }
-        function saveSceneNotes() {
-            const sc = getCurrentScene(); if(!sc) return;
-            sc.notes = document.getElementById('sceneNoteTextarea').value; saveAppState(); renderScheduleList();
-        }
-
-        function setDrawTool(tool) { currentDrawTool = tool; }
-        function setDrawColor(c) { currentDrawColor = c; }
-        function closeAnnotatorModal() { closeModal('annotatorModal'); }
-
-        function renderFramesGallery() {
-            const scene = getCurrentScene();
-            if(!scene) return;
-            const frames = sceneFramesMap[scene.sceneId] || [];
-            const gallery = document.getElementById('framesGalleryContainer');
-            if(frames.length===0){ gallery.innerHTML = `<div class="text-center text-xs text-slate-500 py-6">无截图</div>`; return;}
-            gallery.innerHTML = frames.map(f => `<div class="bg-black rounded border border-studio-700 p-1 mb-2"><img src="${f.dataUrl}" class="w-full h-auto"><div class="text-[10px] text-cyan-300 mt-1">${escapeHtml(f.caption)}</div></div>`).join('');
-        }
-
+        // ==================== 12. 辅助工具与收工日报导出 ====================
         function switchMobileMainTab(tab) {
             ['schedule', 'script', 'workspace'].forEach(t => {
                 const btn = document.getElementById(`mobTab-${t}`);
@@ -896,6 +1653,7 @@
                 }
             });
         }
+
         function switchWorkspaceTab(tabName) {
             ['shots', 'frames', 'notes'].forEach(t => {
                 document.getElementById(`wsTab-${t}`).classList.toggle('bg-amber-500', t === tabName);
@@ -905,30 +1663,295 @@
             });
         }
 
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+        function openModal(id) {
+            const m = document.getElementById(id);
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+
         function showToast(msg) {
             const t = document.getElementById('toastNotification');
             document.getElementById('toastMessage').textContent = msg;
-            t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 2500);
-        }
-        function escapeHtml(str) { return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-        function resetAllDataConfirm() { localStorage.removeItem(STORAGE_KEY_STATE); location.reload(); }
-        function adjustScriptFontSize(d) { appState.scriptFontSize = Math.max(-1, Math.min(2, appState.scriptFontSize + d)); renderScriptPanel(); }
-        function setStatusFilter(stat) { appState.statusFilter = stat; renderScheduleList(); }
-        function clearScheduleSearch() { document.getElementById('scheduleSearchInput').value = ''; renderScheduleList(); }
-        function copyTextSummaryToClipboard() {
-            showToast("功能准备中，暂需调用浏览器API");
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2600);
         }
 
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function resetAllDataConfirm() {
+            if (confirm("确定清空所有通告单、剧本、截图批注和打板数据吗？")) {
+                localStorage.removeItem(STORAGE_KEY_STATE);
+                localStorage.removeItem(STORAGE_KEY_FRAMES);
+                location.reload();
+            }
+        }
+
+        function setStatusFilter(stat) {
+            appState.statusFilter = stat;
+            document.querySelectorAll('.stat-filter-btn').forEach(b => {
+                b.className = "stat-filter-btn py-1.5 rounded-lg text-[11px] font-medium bg-studio-850 text-slate-400 hover:bg-studio-800";
+            });
+            const curBtn = document.getElementById(`statBtn-${stat}`);
+            if (curBtn) curBtn.className = "stat-filter-btn py-1.5 rounded-lg text-[11px] font-bold bg-studio-700 text-white";
+            renderScheduleList();
+        }
+
+        function clearScheduleSearch() {
+            document.getElementById('scheduleSearchInput').value = '';
+            renderScheduleList();
+        }
+
+        function copyTextSummaryToClipboard() {
+            const total = appState.callSheet.length;
+            const doneScenes = appState.callSheet.filter(s => s.status === 'done');
+            const shootingScenes = appState.callSheet.filter(s => s.status === 'shooting');
+            const pendingScenes = appState.callSheet.filter(s => s.status === 'pending');
+
+            let report = `🎬 《我告白的第十年》拍摄收工日报\n`;
+            report += `📅 日期: ${new Date().toLocaleDateString()}\n`;
+            report += `📊 今日总场次: ${total} 场 | 已完成: ${doneScenes.length} 场 | 进度: ${total > 0 ? Math.round(doneScenes.length / total * 100) : 0}%\n\n`;
+
+            report += `✅ 已拍完成场次 (${doneScenes.length}场):\n`;
+            doneScenes.forEach(s => {
+                const takesCount = (s.takes || []).length;
+                report += `  - 顺${s.order} 场${s.sceneId} [${s.mainSet} ${s.subSet}] 内容:${s.summary} (打板:${takesCount}条)\n`;
+            });
+
+            if (pendingScenes.length > 0) {
+                report += `\n⏳ 剩余待拍场次 (${pendingScenes.length}场):\n`;
+                pendingScenes.forEach(s => {
+                    report += `  - 顺${s.order} 场${s.sceneId} [${s.mainSet}] ${s.summary}\n`;
+                });
+            }
+
+            navigator.clipboard.writeText(report).then(() => {
+                showToast("收工日报已成功复制到剪贴板！");
+            }).catch(() => {
+                alert(report);
+            });
+        }
+
+        function exportDataJson() {
+            const data = {
+                appState,
+                sceneFramesMap,
+                exportTime: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `片场工作台备份_${new Date().toISOString().substring(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("已导出数据备份文件");
+        }
+
+        // ==================== 13. 内置示例真实数据集 (全24场通告 + 剧本) ====================
+        const SAMPLE_CALL_SHEET = [
+            { order: 1, sceneId: "38-2", mainSet: "律所", subSet: "停车场", atmosphere: "日 外", summary: "小陆打了周", pages: 0.3 },
+            { order: 2, sceneId: "42-3", mainSet: "酒店", subSet: "餐厅外", atmosphere: "日 外", summary: "小陆看到周与人交易给姜打电话", pages: 0.2 },
+            { order: 3, sceneId: "8-2", mainSet: "公园", subSet: "海边跑道", atmosphere: "日 外", summary: "大陆看着围着姜转的小陆（小陆版）", pages: 0.7 },
+            { order: 4, sceneId: "9-1", mainSet: "公园", subSet: "海边跑道", atmosphere: "日 外", summary: "接8-2:大陆给姜贴肌贴（小陆版）", pages: 0.4 },
+            { order: 5, sceneId: "8-2", mainSet: "公园", subSet: "海边跑道", atmosphere: "日 外", summary: "大陆看着围着姜转的小陆（大陆版）", pages: 0.7 },
+            { order: 6, sceneId: "9-1", mainSet: "公园", subSet: "海边跑道", atmosphere: "日 外", summary: "接8-2:大陆给姜贴肌贴（大陆版）", pages: 0.4 },
+            { order: 7, sceneId: "13-1A", mainSet: "酒店", subSet: "一楼走廊", atmosphere: "夜 内", summary: "三人来到酒店（大陆版）", pages: 0.1 },
+            { order: 8, sceneId: "22-1", mainSet: "酒店", subSet: "二楼走廊", atmosphere: "改日 内", summary: "大陆安抚姜，小陆出现问大陆（大陆版）", pages: 0.4 },
+            { order: 9, sceneId: "21-1", mainSet: "酒店", subSet: "包间B", atmosphere: "改日 内", summary: "闯入包间的小孩子，姜哭着跑出（大陆版）", pages: 1.0 },
+            { order: 10, sceneId: "13-1", mainSet: "酒店", subSet: "包厢A", atmosphere: "夜 内", summary: "姜跟众人介绍，大陆告知小陆周的情况（大陆版）", pages: 0.7 },
+            { order: 11, sceneId: "14-1", mainSet: "酒店", subSet: "包厢A", atmosphere: "夜 内", summary: "周被灌晕（大陆版）", pages: 0.4 },
+            { order: 12, sceneId: "26-2", mainSet: "儿童游乐园", subSet: "", atmosphere: "日 外", summary: "（5年前）闪回：姜逛晕倒", pages: 0.5 },
+            { order: 13, sceneId: "22-1", mainSet: "酒店", subSet: "二楼走廊", atmosphere: "改日 内", summary: "大陆安抚姜，小陆出现问大陆（小陆版）", pages: 0.4 },
+            { order: 14, sceneId: "21-1", mainSet: "酒店", subSet: "包间B", atmosphere: "夜 内", summary: "闯入包间的小孩子，姜哭着跑出（小陆版）", pages: 1.0 },
+            { order: 15, sceneId: "13-1A", mainSet: "酒店", subSet: "一楼走廊", atmosphere: "夜 内", summary: "三人来到酒店（小陆版）", pages: 0.1 },
+            { order: 16, sceneId: "13-1", mainSet: "酒店", subSet: "包厢A", atmosphere: "夜 内", summary: "姜跟众人介绍，大陆告知小陆周的情况（小陆版）", pages: 0.7 },
+            { order: 17, sceneId: "14-1", mainSet: "酒店", subSet: "包厢A", atmosphere: "夜 内", summary: "周被灌晕（小陆版）", pages: 0.4 },
+            { order: 18, sceneId: "15-1", mainSet: "酒店", subSet: "门口", atmosphere: "夜 外", summary: "接14-2:两手抓，两手都要（小陆版）", pages: 0.7 },
+            { order: 19, sceneId: "16-1", mainSet: "酒店", subSet: "门口", atmosphere: "夜 外", summary: "接15-1:大陆拆穿姜撒谎喜欢抓耳后（小陆版）", pages: 0.2 },
+            { order: 20, sceneId: "16-1A", mainSet: "陆车", subSet: "行驶中", atmosphere: "夜 外", summary: "大陆夸小陆（小陆版）", pages: 0.2 },
+            { order: 21, sceneId: "14-2", mainSet: "酒店", subSet: "门口", atmosphere: "夜 外", summary: "周塞进车里，大陆声称保护姜", pages: 0.2 },
+            { order: 22, sceneId: "15-1", mainSet: "酒店", subSet: "门口", atmosphere: "夜 外", summary: "接14-2:两手抓，两手都要（大陆版）", pages: 0.7 },
+            { order: 23, sceneId: "16-1", mainSet: "酒店", subSet: "门口", atmosphere: "夜 外", summary: "接15-1:大陆拆穿姜撒谎喜欢抓耳后（大陆版）", pages: 0.2 },
+            { order: 24, sceneId: "16-1A", mainSet: "陆车", subSet: "行驶中", atmosphere: "夜 外", summary: "大陆夸小陆（大陆版）", pages: 0.2 }
+        ];
+
+        const SAMPLE_FULL_SCRIPT = `
+0-1
+日 外 海边
+人物：姜莱、大陆、小陆
+△梦境色。海风很大，浪花拍打着礁石。姜莱一个人站在沙滩上，四周空无一人，只有海浪的声音。
+△她低头，看到自己赤着脚。海水漫过脚踝，冰凉，逐渐往海的深处走去。
+大陆：老婆，小心！
+△姜莱抬头，看见前方（年上装扮）大陆，正一脸忧心忡忡地看着自己。
+大陆伸出手：老婆，要涨潮了。把手给我，我们回家。
+△姜莱的手刚要伸出去，身后突然有人叫她的名字。
+小陆：姐姐！别跟他走！
+小陆伸手：老婆，他不值得。跟我走，我带你回去。
+
+第八集 姐姐！你吃得真好！
+8-1
+日 内 客厅
+人物：姜莱、大陆、小陆
+大陆背过身，偷偷打字，VO：把十一点前的会议取消。再给我闪送一双跑鞋，要快。
+大陆回头：嗯，我确定。
+
+8-2
+日 外 公园
+人物：姜莱、大陆、小陆、环境路人若干
+△姜莱穿着健身服跑步，小陆青春洋溢，与姜莱并排说说笑笑。大陆落在了后面，一脸怨念的看着前方的身影。
+小陆嬉皮笑脸：老婆姐姐，我比那个老男人好吧？姜莱看他一眼：比他年轻十岁，但比他幼稚二十岁，算下来倒亏十年。
+小陆撇嘴：老男人有什么好，难道会天天陪你锻炼？
+姜莱：他工作很忙的，哪儿有空陪我。
+△休息处，小陆拿着两瓶水，等待姜莱抵达。
+小陆：姐姐，给，喝点水。
+路人跑过，大喊：小姐姐！你吃得真好！
+大陆冷冷从后面出现，并挤开小陆：她膝盖受过伤，不能跑太快，更不能和你比赛。
+
+第九集 姐姐、绿茶与哑巴新郎
+9-1
+日 外 公园
+人物：姜莱、大陆、小陆、环境路人若干
+小陆心疼：姐姐，你什么时候受的伤？
+姜莱：小伤而已，前几年去乡下做法援摔了一跤。
+大陆：都撕裂了还是小伤吗。
+△只见大陆径直蹲了下来，熟练地拿出肌贴从姜莱的髌骨上缘开始包绕贴了一个Y型。
+大陆有些不好意思：家里医药箱没有了，刚买的，将就用。
+姜莱怔怔看着大陆OS：陆惜时怎么会记得这么清楚，贴肌贴的动作也很熟练？
+大陆起身：你站起来试试舒不舒服...我贴的不太好。
+姜莱：多谢。
+
+第十三集 陆惜时，是我先生
+13-1
+夜 内 饭局包间
+人物：姜莱、大陆、小陆、闺蜜律师伊莎、周茗、王总
+△姜莱一身职业装，大陆西装革履，小陆阳光年下，三人走在饭店走廊。（三人来到酒店）
+小陆低声：给我的活儿又脏又累，自己却打扮得人模狗样。还好我紧急回家洗了个澡！
+大陆：挣钱就是很辛苦的，小孩儿。
+△三人进包间，包间已坐着四个人。客户王总坐在主位，旁边是合伙人周茗，另一边是姜莱的律师闺蜜伊莎。
+姜莱：给王总介绍一下，这位是我先生，陆惜时，这是......我先生的弟弟。（姜跟众人介绍）
+王总惊讶：啊，原来姜律的先生就是莱时资本的陆总？久仰久仰！
+大陆：不敢当，今天主角是姜律。
+小陆低声：这老登谁？人快黏在老婆身上了。
+大陆：周茗，律所创始人，40岁，前年离异。查过，想弄他很久了。
+小陆：很好，他今天完了。
+
+第十四集 我俩吵归吵，你算哪根葱
+14-1
+日 内 饭局包间
+人物：姜莱、大陆、小陆、闺蜜律师伊莎、周茗、王总、服务员小哥
+△蒙太奇组镜。
+小陆：周律是吧？叫我小陆就好，多谢您照顾我嫂子！
+小陆：重要的人要喝三杯，来！
+周茗大着舌头：陆总，明年和莱时的合作，还希望您多多给机会！
+△周茗拿着酒瓶已经晕的不行，彻底趴在了桌子上。（周被灌晕）
+大陆：看周律这样子，今天我们就到这吧，我送他出去。
+
+14-2
+餐厅门口
+人物： 姜莱、大陆、周茗
+△大陆架着周茗出来，姜莱跟在后面，车已到。
+△大陆粗暴地把周茗塞进车内，车开走。（周塞进车里）
+姜莱：你俩怎么回事？今天这么针对周茗。
+大陆：周茗给你倒酒的时候，我看见他故意碰到了你的手背。
+姜莱（心虚）你是来吃饭的，还是来盯人的？
+大陆毫不犹豫：来保护你的。（大陆声称保护姜）
+△姜莱愣住。
+
+第十五集 两手抓，两手都要硬
+15-1
+夜 外 餐厅门口
+人物： 姜莱、大陆、小陆、伊莎
+大陆：我知道你碍于同事情面不好发作。但是他碰你，你会不舒服。
+△姜莱怔怔看向大陆，大陆把外衣脱下来裹住了姜莱。
+△闺蜜伊莎出来，拍了拍姜莱的肩。
+伊莎两手变爪：走了啊，宝贝！记得两手抓，两手都要硬啊！（接14-2:两手抓两手都要）
+
+第十六集 妈你都不知道，惜时他可黏我了
+16-1
+夜 外 餐厅门口
+人物： 姜莱、大陆、小陆、伊莎、伊莎男友
+△姜莱把刘海别到耳后，抓了抓耳朵后面。
+姜莱：...伊莎说，一个合格的律师要专业履职与社会责任两手抓。
+大陆：你知道你撒谎的时候，总是喜欢抓耳朵吗。（大陆拆穿姜撒谎喜欢抓耳后）
+△司机把车开到了门口，小陆和大陆走过来，小陆想拉开前座，被大陆拉住。
+大陆：让她坐前面。
+△车子驶入夜色。
+小陆醉醺醺，得意洋洋：今晚我表现怎么样？
+大陆：嗯，真不错。（大陆夸小陆）
+小陆愣住：你肯夸我？
+大陆：偶尔也要说点实话。
+
+第二十一集 白天忙事业，晚上可以要孩子啊
+21-1
+夜 内 餐厅包间
+人物：姜莱、大陆、小陆、姜母、姜父、小女孩、服务员
+△突然一个四五岁的小女孩跑进包房，一下子扑到姜莱怀里。（闯入包间的小孩子）
+小女孩奶声奶气：妈妈，我刚才迷路了。
+姜莱温柔：小朋友，你是走错房间了吗？今年几岁了呀。
+小女孩比了个四：月儿今年四岁了。
+△姜莱听到的一瞬间怔住。
+△此时服务员进来，牵起孩子的手。
+△姜莱看着小女孩跑开的背影，眼眶突然红了。
+姜莱站起来：对不起，我去一下洗手间。（姜哭着跑出）
+△姜莱快步走出包间，大陆按住小陆：我去。
+
+第二十二集 每次你刚让我心软，就让我心死
+22-1
+夜 内 餐馆走廊人物：姜莱、大陆
+△姜莱站在走廊尽头，肩膀微微发抖。大陆走过来，伸手轻轻放在她肩上。（大陆安抚姜）
+姜莱看见大陆过来，连忙抹掉眼泪：爸妈没看出什么吧？我马上就好。
+大陆轻声：对不起，我应该早点跟妈说清楚。
+姜莱：陆惜时，我真看不透你。每次你刚让我心软，就让我心死。
+△小陆在拐角处，听到了这一切，走过来质问大陆：（小陆出现问大陆）
+小陆：她怎么了？你敢做什么对不起她的事，我和你没完！
+
+第二十六集 如果有什么意外，你一定要保护好孩子
+26-2
+新闪 日 外 海边游乐场
+人物：姜莱、路人母亲、路人小女孩
+△姜莱小腹微微凸起（3-4个月），走进游乐园。突然看到地上有一个漂亮的小发卡。（5年前闪回）
+女人拿起手中的发卡，塞到姜莱手里：小发卡送给你吧，我生她的时候特别顺利，就当让你沾沾喜气。
+姜莱：穗穗...岁岁...是岁岁平安的意思呢。
+△姜莱突然脸色发白，按住了胸口。
+△姜莱身子一软，倒了下去。（姜逛晕倒）
+
+第三十八集 没想到您还有这么热血泼辣的一面哈
+38-2
+日 外 地下车库人物：小陆、周茗
+△周茗志得意满地从车库出来，准备上车。小陆戴着鸭舌帽，从柱子后面闪出来，挡在他面前。
+周茗吓了一跳：你谁啊？
+小陆：你爹！
+△一拳挥过去，正中周茗鼻梁，周茗惨叫一声。（小陆打了周）
+小陆压着周茗，一手揪着他衣领：你他妈再欺负姜莱试试？
+
+第四十二集 放着金尊玉贵的老板娘不当，和我们抢什么饭碗
+42-3
+日 外 酒店餐厅外
+人物：小陆、周茗、西装男
+△街头，小陆一身学生打扮，戴着鸭舌帽黑口罩，在餐厅外蹲点。
+△周茗和一个西装男一起走出来，周茗警惕地朝四周看一眼。
+△小陆视角：周茗和西装男握手，交换了一个文件袋。小陆连续拍了好几张照片。
+小陆转身，低声打电话：姐姐，根据你在周茗办公室查到的线索，我蹲到你说的那个人了。（小陆看到周与人交易给姜打电话）
+`;
+
+        // ==================== 14. 页面初始化 ====================
         window.onload = function () {
             loadAppState();
             initAnnotatorCanvas();
-            refreshAllViews();
-            
-            // 如果空空如也，主动弹开导入框
-            if(appState.callSheet.length === 0) {
-                openModal('importModal');
+
+            // 若从未导入过数据，自动载入真实示例数据
+            if (appState.callSheet.length === 0) {
+                loadSampleDataset();
+            } else {
+                refreshAllViews();
             }
         };
     </script>
