@@ -160,23 +160,28 @@ export default function SetTrackerApp() {
         return result.value;
     };
 
-    const parseSceneIds = (text) => {
-        // Regex to match scene formats: 1-1, 12-3A, 第1场, 场次2
-        // 增强版正则表达式，能抓取 1-1, 1-1A, 第1场, 场次1 等多种格式
-const regex = /(?:第\s*(\d+)\s*场|场次\s*(\d+(?:-\d+[A-Za-z]?)?)|场\s*(\d+(?:-\d+[A-Za-z]?)?)|\b(\d+-\d+[A-Za-z]?)\b)/g;
-        const matches = [...text.matchAll(regex)];
-        const scenes = [];
-        const uniqueIds = new Set();
-
-        matches.forEach(match => {
-            const id = match[1] || match[2] || match[3] || match[4];
-            if (id && !uniqueIds.has(id)) {
-                uniqueIds.add(id);
-                scenes.push({ id, raw: match[0], index: match.index });
-            }
-        });
-        return scenes;
-    };
+    // 替换原来的解析引擎代码
+const parseSceneIds = (text, isCallSheet = false) => {
+    // 如果是剧本，寻找 "1-1" 或 "1-2A" 格式
+    const scriptRegex = /(?:^|\n)\s*(\d+)-(\d+[A-Za-z]?)\s+/g;
+    // 如果是通告单（PDF表格提取），寻找连续的两个数字，例如 "1 2" 或 "1 2A"
+    const callSheetRegex = /\b(\d+)\s+(\d+[A-Za-z]?)\s+[\u4e00-\u9fa5]/g;
+    
+    const regex = isCallSheet ? callSheetRegex : scriptRegex;
+    const matches = [...text.matchAll(regex)];
+    const scenes = [];
+    const uniqueIds = new Set();
+    
+    matches.forEach(match => {
+        // 强行把通告单里的 "1 2A" 拼接成剧本里的 "1-2A" 以实现强制握手
+        const id = `${match[1]}-${match[2]}`; 
+        if (id && !uniqueIds.has(id)) {
+            uniqueIds.add(id);
+            scenes.push({ id, raw: match[0], index: match.index });
+        }
+    });
+    return scenes;
+};
 
     const chunkScriptByScenes = (scriptTxt, extractedScenes) => {
         const chunks = {};
