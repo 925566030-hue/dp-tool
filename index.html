@@ -8,10 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="片场工作台">
     <title>片场工作台</title>
     
-    <!-- 加载 Tailwind 样式 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 设置 ES 模块映射，让浏览器能识别 import 语法 -->
     <script type="importmap">
     {
         "imports": {
@@ -21,18 +18,18 @@
         }
     }
     </script>
-    
-    <!-- 加载 Babel 将 React JSX 实时转换为浏览器可读代码 -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-slate-900 text-white overflow-hidden">
     <div id="root"></div>
 
+    <!-- 👇 关键点 1：千万不要删掉下面这行 script 标签 👇 -->
     <script type="text/babel" data-type="module">
         import { createRoot } from 'react-dom/client';
         
         // ========================================== //
-        // ⬇️ 请将您刚才复制的全部代码（从 import React 开始一直到最后）完整粘贴到下面 ⬇️
+        // ⬇️ 请把你昨天生成的那一大段 React 代码，完整粘贴在这个区域 ⬇️
+        // （代码开头应该是 import React... 结尾是组件的最后一个大括号 }）
         // ========================================== //
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
@@ -717,13 +714,13 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
         </section>
     );
 }
-        
+
 
         // ========================================== //
-        // ⬆️ 代码粘贴结束 ⬆️
+        // ⬆️ 粘贴区域结束 ⬆️
         // ========================================== //
 
-        // 挂载应用到页面
+        // 👇 关键点 2：千万不要删掉下面这两行，这是启动 App 的开关 👇
         const root = createRoot(document.getElementById('root'));
         root.render(<SetTrackerApp />);
     </script>
