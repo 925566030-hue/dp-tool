@@ -1,3 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="片场工作台">
+    <title>片场工作台</title>
+    
+    <!-- 加载 Tailwind 样式 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 设置 ES 模块映射，让浏览器能识别 import 语法 -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+        }
+    }
+    </script>
+    
+    <!-- 加载 Babel 将 React JSX 实时转换为浏览器可读代码 -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-900 text-white overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import { createRoot } from 'react-dom/client';
+        
+        // ========================================== //
+        // ⬇️ 请将您刚才复制的全部代码（从 import React 开始一直到最后）完整粘贴到下面 ⬇️
+        // ========================================== //
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
     Upload, FileText, File, Video, Camera, Image as ImageIcon, 
@@ -681,3 +717,15 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
         </section>
     );
 }
+        
+
+        // ========================================== //
+        // ⬆️ 代码粘贴结束 ⬆️
+        // ========================================== //
+
+        // 挂载应用到页面
+        const root = createRoot(document.getElementById('root'));
+        root.render(<SetTrackerApp />);
+    </script>
+</body>
+</html>
