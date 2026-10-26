@@ -23,14 +23,9 @@
 <body class="bg-slate-900 text-white overflow-hidden">
     <div id="root"></div>
 
-    <!-- 👇 关键点 1：千万不要删掉下面这行 script 标签 👇 -->
     <script type="text/babel" data-type="module">
         import { createRoot } from 'react-dom/client';
-        
-        // ========================================== //
-        // ⬇️ 请把你昨天生成的那一大段 React 代码，完整粘贴在这个区域 ⬇️
-        // （代码开头应该是 import React... 结尾是组件的最后一个大括号 }）
-        // ========================================== //
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     Upload, FileText, File, Video, Camera, Image as ImageIcon, 
@@ -38,9 +33,6 @@ import {
     Clapperboard, PenLine, Undo
 } from 'lucide-react';
 
-// ==========================================
-// 1. DYNAMIC SCRIPT LOADER FOR EXTERNAL LIBRARIES
-// ==========================================
 const loadScript = (src) => {
     return new Promise((resolve, reject) => {
         if (document.querySelector(`script[src="${src}"]`)) {
@@ -80,11 +72,11 @@ const normalizeSceneId = (rawValue) => {
     if (!rawValue) return null;
     const str = String(rawValue).trim().replace(/[\u2010-\u2015\u2212]/g, '-');
     const compact = str.replace(/\s+/g, '').replace(/[（)]/g, '').replace(/^[^\d]*/, '');
-    const match = compact.match(/^(\d{1,3})(?:-(\d{1,3}[A-Za-z]?))$/);
-    if (match) return `${match[1]}-${match[2]}`;
+    const direct = compact.match(/^(\d{1,3})(?:-(\d{1,3}[A-Za-z]?))$/);
+    if (direct) return `${direct[1]}-${direct[2]}`;
 
-    const alt = compact.match(/^(\d{1,3})(\d{1,3}[A-Za-z]?)$/);
-    if (alt) return `${alt[1]}-${alt[2]}`;
+    const compactPair = compact.match(/^(\d{1,3})(\d{1,3}[A-Za-z]?)$/);
+    if (compactPair) return `${compactPair[1]}-${compactPair[2]}`;
 
     const plain = compact.match(/^(\d{1,3}[A-Za-z]?)$/);
     if (plain) return plain[1];
@@ -105,19 +97,21 @@ const isLikelySceneId = (id) => {
 };
 
 const collectSceneCandidatesFromText = (text) => {
-    const normalizedText = normalizeTextForParsing(text);
+    const normalizedText = normalizeTextForParsing(text || '');
     const candidates = [];
     const seen = new Set();
 
-    const patterns = [
-        /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:]) /g,
+    const scenePatterns = [
+        /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:])/g,
         /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:])/g,
         /第\s*(\d{1,3})\s*[-–—]?\s*(\d{1,3}[A-Za-z]?)\s*场/g,
         /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?:\s*（[^）]*）)?/g,
-        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?:\s*（[^）]*）)?/g
+        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?:\s*（[^）]*）)?/g,
+        /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?:\s*\([^)]*\))?/g,
+        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?:\s*\([^)]*\))?/g
     ];
 
-    patterns.forEach(regex => {
+    scenePatterns.forEach(regex => {
         const matches = [...normalizedText.matchAll(regex)];
         matches.forEach(match => {
             const id = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
@@ -127,21 +121,35 @@ const collectSceneCandidatesFromText = (text) => {
         });
     });
 
+    const grouped = candidates.sort((a, b) => a.index - b.index);
+    if (grouped.length > 0) return grouped;
+
+    const lines = normalizedText.split(/\n+/);
+    lines.forEach((line, lineIndex) => {
+        if (!/(场次|scene|SCENE|Scene)/i.test(line)) return;
+        const matches = [...line.matchAll(/(\d{1,3})\s*(?:[-–—]|\s+)(\d{1,3}[A-Za-z]?)/g)];
+        matches.forEach(match => {
+            const id = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
+            if (!id || !isLikelySceneId(id) || seen.has(id)) return;
+            seen.add(id);
+            candidates.push({ id, index: lineIndex, raw: match[0].trim() });
+        });
+    });
+
     return candidates.sort((a, b) => a.index - b.index);
 };
 
 const buildSceneMatchPatterns = (sceneId) => {
     const [a, b] = sceneId.split('-');
     const second = String(b || '').trim();
-    const letter = second.match(/[A-Za-z]$/)?.[0] || '';
     const secondNum = second.replace(/[^\d]/g, '');
     const variants = [
         `${a}-${second}`,
         `${a} ${second}`,
         `${a}-${secondNum}`,
         `${a} ${secondNum}`,
-        `${a}-${secondNum}${letter}`,
-        `${a} ${secondNum}${letter}`,
+        `${a}-${secondNum}${second.replace(/\d/g, '')}`,
+        `${a} ${secondNum}${second.replace(/\d/g, '')}`,
         `第${a}场`,
         `第${a}-${second}场`,
         `第${a}-${secondNum}场`,
@@ -156,10 +164,8 @@ const buildSceneMatchPatterns = (sceneId) => {
 const parseSceneIds = (text) => {
     const normalizedText = normalizeTextForParsing(text || '');
     const candidates = collectSceneCandidatesFromText(normalizedText);
-
     if (candidates.length > 0) return candidates;
 
-    // Fallback: supplier script style `1-1`, `1-2A` etc. with Chinese labels and spaces
     const fallback = [...normalizedText.matchAll(/(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?=\s|$)/g)];
     const results = [];
     const seen = new Set();
@@ -169,7 +175,7 @@ const parseSceneIds = (text) => {
         seen.add(id);
         results.push({ id, index: match.index ?? 0, raw: match[0].trim() });
     });
-    return results.sort((a,b)=>a.index-b.index);
+    return results.sort((a, b) => a.index - b.index);
 };
 
 const chunkScriptByScenes = (scriptTxt, extractedScenes) => {
@@ -181,17 +187,14 @@ const chunkScriptByScenes = (scriptTxt, extractedScenes) => {
     extractedScenes.forEach(scene => {
         if (!scene || !scene.id) return;
         const patterns = buildSceneMatchPatterns(scene.id);
-        let foundIndex = -1;
-        let foundPattern = null;
+        let bestIndex = -1;
         patterns.forEach(regex => {
             const match = scriptText.match(regex);
-            if (match && match.index !== undefined && (foundIndex === -1 || match.index < foundIndex)) {
-                foundIndex = match.index;
-                foundPattern = regex;
+            if (match && match.index !== undefined && (bestIndex === -1 || match.index < bestIndex)) {
+                bestIndex = match.index;
             }
         });
-
-        if (foundIndex >= 0) positions.push({ id: scene.id, index: foundIndex });
+        if (bestIndex >= 0) positions.push({ id: scene.id, index: bestIndex });
     });
 
     positions.sort((a, b) => a.index - b.index);
@@ -335,9 +338,9 @@ export default function SetTrackerApp() {
 
             let scenes = parseSceneIds(csText);
             if (!scenes || scenes.length === 0) {
-                const fallbackSceneCandidates = parseSceneIds(spText || csText);
-                if (fallbackSceneCandidates.length > 0) {
-                    scenes = fallbackSceneCandidates;
+                const fallback = parseSceneIds(spText || csText);
+                if (fallback.length > 0) {
+                    scenes = fallback;
                     showToast('通告单未直接识别到场次，已回退到剧本结构识别。', 'error');
                 } else {
                     showToast('未能从通告单中识别到标准场次号(如1-1、1-2A)。', 'error');
@@ -422,7 +425,7 @@ export default function SetTrackerApp() {
                         <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
                             <FileText className="w-4 h-4 mr-1.5" /> 通告场次列表
                         </h2>
-                        <div className="text-[11px] text-slate-500 leading-tight">从通告单自动提取，点击查看剧本与机位笔记</div>
+                        <div className="text-[11px] text-slate-500 leading-tight">从通告��自动提取，点击查看剧本与机位笔记</div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                         {parsedScenes.map((scene, idx) => (
@@ -780,11 +783,6 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
     );
 }
 
-        // ========================================== //
-        // ⬆️ 粘贴区域结束 ⬆️
-        // ========================================== //
-
-        // 👇 关键点 2：千万不要删掉下面这两行，这是启动 App 的开关 👇
         const root = createRoot(document.getElementById('root'));
         root.render(<SetTrackerApp />);
     </script>
