@@ -162,7 +162,8 @@ export default function SetTrackerApp() {
 
     const parseSceneIds = (text) => {
         // Regex to match scene formats: 1-1, 12-3A, 第1场, 场次2
-        const regex = /(?:第\s*(\d+)\s*场|场次\s*(\d+)|场\s*(\d+)|(\d+-\d+[A-Za-z]?))/g;
+        // 增强版正则表达式，能抓取 1-1, 1-1A, 第1场, 场次1 等多种格式
+const regex = /(?:第\s*(\d+)\s*场|场次\s*(\d+(?:-\d+[A-Za-z]?)?)|场\s*(\d+(?:-\d+[A-Za-z]?)?)|\b(\d+-\d+[A-Za-z]?)\b)/g;
         const matches = [...text.matchAll(regex)];
         const scenes = [];
         const uniqueIds = new Set();
