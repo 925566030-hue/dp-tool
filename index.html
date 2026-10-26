@@ -1,792 +1,936 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="片场工作台">
-    <title>片场工作台</title>
-    
+    <title>《不再遗憾的夏天》iPad片场通告与剧本工作台</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="importmap">
-    {
-        "imports": {
-            "react": "https://esm.sh/react@18.2.0",
-            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-            "lucide-react": "https://esm.sh/lucide-react@0.292.0"
-        }
-    }
-    </script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body class="bg-slate-900 text-white overflow-hidden">
-    <div id="root"></div>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- 引入离线文件解析依赖 (PDF.js / Mammoth) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
-    <script type="text/babel" data-type="module">
-        import { createRoot } from 'react-dom/client';
-
-import React, { useState, useEffect, useRef } from 'react';
-import {
-    Upload, FileText, File, Video, Camera, Image as ImageIcon,
-    PenTool, Save, Trash2, ChevronRight, AlertCircle, CheckCircle2,
-    Clapperboard, PenLine, Undo
-} from 'lucide-react';
-
-const loadScript = (src) => new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-        resolve();
-        return;
-    }
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.body.appendChild(script);
-});
-
-const CDNS = {
-    localforage: 'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
-    pdfjs: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-    pdfjsWorker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
-    mammoth: 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js'
-};
-
-const STORAGE_KEY = 'cine_set_tracker_v2';
-const safeLocalforage = () => (window && window.localforage ? window.localforage : null);
-
-const normalizeTextForParsing = (text) => {
-    if (!text) return '';
-    return String(text)
-        .replace(/\r/g, '\n')
-        .replace(/\u00A0/g, ' ')
-        .replace(/[\u2010-\u2015\u2212]/g, '-')
-        .replace(/[\t\f]/g, ' ')
-        .replace(/\n{3,}/g, '\n\n')
-        .replace(/[ ]{2,}/g, ' ');
-};
-
-const normalizeSceneId = (rawValue) => {
-    if (!rawValue) return null;
-    const str = String(rawValue).trim().replace(/[\u2010-\u2015\u2212]/g, '-');
-    const compact = str.replace(/\s+/g, '').replace(/[（)]/g, '').replace(/^[^\d]*/, '');
-
-    const direct = compact.match(/^(\d{1,3})(?:-(\d{1,3}[A-Za-z]?))$/);
-    if (direct) return `${direct[1]}-${direct[2]}`;
-
-    const compactPair = compact.match(/^(\d{1,3})(\d{1,3}[A-Za-z]?)$/);
-    if (compactPair) return `${compactPair[1]}-${compactPair[2]}`;
-
-    const plain = compact.match(/^(\d{1,3}[A-Za-z]?)$/);
-    if (plain) return plain[1];
-
-    return null;
-};
-
-const isLikelySceneId = (id) => {
-    if (!id) return false;
-    const raw = String(id).trim();
-    if (!/^\d{1,3}-\d{1,3}[A-Za-z]?$/.test(raw)) return false;
-    const [a, b] = raw.split('-');
-    const numA = Number(a);
-    const numB = Number((b || '').replace(/[^\d]/g, ''));
-    if (!Number.isFinite(numA) || !Number.isFinite(numB)) return false;
-    if (numA > 1000 || numB > 1000) return false;
-    return true;
-};
-
-const isNoiseLike = (id) => {
-    if (!id) return true;
-    const raw = String(id).trim();
-    if (/^(\d{1,2})([:：]\d{2})$/.test(raw)) return true;
-    if (/^(\d{1,4})[-/]\d{1,2}[-/]\d{1,2}$/.test(raw)) return true;
-    if (/^(\d{1,2}[月日])$/.test(raw)) return true;
-    if (/^(\d{1,2}:\d{2})$/.test(raw)) return true;
-    return false;
-};
-
-const collectSceneCandidatesFromText = (text) => {
-    const normalizedText = normalizeTextForParsing(text || '');
-    const candidates = [];
-    const seen = new Set();
-
-    const patterns = [
-        /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:：])/g,
-        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?=\s|$|[，。；、,.;:：])/g,
-        /第\s*(\d{1,3})\s*[-–—]?\s*(\d{1,3}[A-Za-z]?)\s*场/g,
-        /(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?:\s*（[^）]*）)?/g,
-        /(?:^|\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?:\s*（[^）]*）)?/g
-    ];
-
-    patterns.forEach(regex => {
-        const matches = [...normalizedText.matchAll(regex)];
-        matches.forEach(match => {
-            const candidate = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
-            if (!candidate || !isLikelySceneId(candidate) || isNoiseLike(candidate) || seen.has(candidate)) return;
-            seen.add(candidate);
-            candidates.push({ id: candidate, index: match.index ?? 0, raw: match[0].trim() });
-        });
-    });
-
-    if (candidates.length > 0) return candidates.sort((a, b) => a.index - b.index);
-
-    const lines = normalizedText.split(/\n+/);
-    lines.forEach((line) => {
-        if (!/(场次|scene|SCENE|Scene)/i.test(line)) return;
-        const matches = [...line.matchAll(/(\d{1,3})\s*(?:[-–—]|\s+)(\d{1,3}[A-Za-z]?)/g)];
-        matches.forEach(match => {
-            const candidate = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
-            if (!candidate || !isLikelySceneId(candidate) || isNoiseLike(candidate) || seen.has(candidate)) return;
-            seen.add(candidate);
-            candidates.push({ id: candidate, index: 0, raw: match[0].trim() });
-        });
-    });
-
-    return candidates.sort((a, b) => a.index - b.index);
-};
-
-const buildSceneMatchPatterns = (sceneId) => {
-    const [a, b] = sceneId.split('-');
-    const second = String(b || '').trim();
-    const secondNum = second.replace(/[^\d]/g, '');
-    const suffix = second.replace(/\d/g, '');
-    const variants = [
-        `${a}-${second}`,
-        `${a} ${second}`,
-        `${a}-${secondNum}`,
-        `${a} ${secondNum}`,
-        `${a}-${secondNum}${suffix}`,
-        `${a} ${secondNum}${suffix}`,
-        `第${a}场`,
-        `第${a}-${second}场`,
-        `第${a}-${secondNum}场`,
-        `第${a} ${second} 场`
-    ];
-
-    return variants.filter(Boolean).map((v) => new RegExp(`(?:^|\\n|\\s|[（(])${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'));
-};
-
-const parseSceneIds = (text) => {
-    const normalizedText = normalizeTextForParsing(text || '');
-    const candidates = collectSceneCandidatesFromText(normalizedText);
-    if (candidates.length > 0) return candidates;
-
-    const fallback = [...normalizedText.matchAll(/(?:^|\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?=\s|$)/g)];
-    const results = [];
-    const seen = new Set();
-    fallback.forEach(match => {
-        const candidate = normalizeSceneId(`${match[1]}-${match[2]}`);
-        if (!candidate || seen.has(candidate) || !isLikelySceneId(candidate) || isNoiseLike(candidate)) return;
-        seen.add(candidate);
-        results.push({ id: candidate, index: match.index ?? 0, raw: match[0].trim() });
-    });
-    return results.sort((a, b) => a.index - b.index);
-};
-
-const chunkScriptByScenes = (scriptTxt, extractedScenes) => {
-    const chunks = {};
-    const scriptText = normalizeTextForParsing(scriptTxt || '');
-    if (!scriptText || !extractedScenes || extractedScenes.length === 0) return chunks;
-
-    const positions = [];
-    extractedScenes.forEach(scene => {
-        if (!scene || !scene.id) return;
-        const patterns = buildSceneMatchPatterns(scene.id);
-        let bestIndex = -1;
-        patterns.forEach(regex => {
-            const match = scriptText.match(regex);
-            if (match && match.index !== undefined && (bestIndex === -1 || match.index < bestIndex)) {
-                bestIndex = match.index;
-            }
-        });
-        if (bestIndex >= 0) positions.push({ id: scene.id, index: bestIndex });
-    });
-
-    positions.sort((a, b) => a.index - b.index);
-
-    for (let i = 0; i < positions.length; i++) {
-        const curr = positions[i];
-        const next = positions[i + 1];
-        const startIdx = curr.index;
-        const endIdx = next ? next.index : scriptText.length;
-        const chunk = scriptText.substring(startIdx, endIdx).trim();
-        if (chunk) chunks[curr.id] = chunk;
-    }
-
-    if (Object.keys(chunks).length === 0) {
-        const firstScene = extractedScenes[0];
-        if (firstScene && firstScene.id) {
-            const search = new RegExp(`(?:^|\\n|\\s|[（(])${firstScene.id.replace(/[-]/g, '\\s*[-–—\\s]*')}\\b`, 'i');
-            const match = scriptText.match(search);
-            if (match && match.index !== undefined) {
-                chunks[firstScene.id] = scriptText.substring(match.index).trim();
-            }
-        }
-    }
-
-    return chunks;
-};
-
-export default function SetTrackerApp() {
-    const [appStatus, setAppStatus] = useState('loading_deps');
-    const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
-    const [callSheetText, setCallSheetText] = useState('');
-    const [scriptText, setScriptText] = useState('');
-    const [parsedScenes, setParsedScenes] = useState([]);
-    const [scriptChunks, setScriptChunks] = useState({});
-    const [activeSceneId, setActiveSceneId] = useState(null);
-    const [workstationData, setWorkstationData] = useState({});
-
-    const showToast = (msg, type = 'info') => {
-        setToast({ show: true, msg, type });
-        setTimeout(() => setToast({ show: false, msg: '', type: 'info' }), 3000);
-    };
-
-    useEffect(() => {
-        const initApp = async () => {
-            try {
-                await loadScript(CDNS.localforage);
-                await loadScript(CDNS.pdfjs);
-                window.pdfjsLib.GlobalWorkerOptions.workerSrc = CDNS.pdfjsWorker;
-                await loadScript(CDNS.mammoth);
-
-                if (safeLocalforage()) {
-                    window.localforage.config({
-                        name: 'SetTrackerDB',
-                        storeName: 'workstation_store'
-                    });
-                }
-
-                const lf = safeLocalforage();
-                if (lf) {
-                    const savedData = await lf.getItem(STORAGE_KEY);
-                    if (savedData && savedData.parsedScenes && savedData.parsedScenes.length > 0) {
-                        setCallSheetText(savedData.callSheetText || '');
-                        setScriptText(savedData.scriptText || '');
-                        setParsedScenes(savedData.parsedScenes || []);
-                        setScriptChunks(savedData.scriptChunks || {});
-                        setWorkstationData(savedData.workstationData || {});
-                        setActiveSceneId(savedData.activeSceneId || savedData.parsedScenes[0]?.id || null);
-                        setAppStatus('workspace');
-                        return;
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        studio: {
+                            950: '#090b0e',
+                            900: '#0f1217',
+                            850: '#151921',
+                            800: '#1c222d',
+                            700: '#2a3241',
+                            600: '#3d475c'
+                        },
+                        cine: {
+                            amber: '#f59e0b',
+                            cyan: '#06b6d4',
+                            emerald: '#10b981',
+                            rose: '#f43f5e',
+                            violet: '#8b5cf6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'sans-serif'],
+                        mono: ['SF Mono', 'Menlo', 'Monaco', 'Consolas', 'monospace']
                     }
                 }
-                setAppStatus('import');
-            } catch (err) {
-                console.error(err);
-                showToast('依赖加载失败，请检查网络后再试。', 'error');
-                setAppStatus('import');
             }
-        };
-        initApp();
-    }, []);
-
-    useEffect(() => {
-        if (appStatus === 'workspace' && safeLocalforage()) {
-            const dataToSave = {
-                callSheetText,
-                scriptText,
-                parsedScenes,
-                scriptChunks,
-                workstationData,
-                activeSceneId
-            };
-            safeLocalforage().setItem(STORAGE_KEY, dataToSave).catch(e => console.error('Save failed', e));
         }
-    }, [callSheetText, scriptText, parsedScenes, scriptChunks, workstationData, activeSceneId, appStatus]);
+    </script>
+    <style>
+        /* Custom Scrollbars for iPad Pro/Mini Smooth Scrolling */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 18, 23, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(61, 71, 92, 0.7); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(245, 158, 11, 0.8); }
 
-    const extractTextFromPdf = async (file) => {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await window.pdfjsLib.getDocument(arrayBuffer).promise;
-        let text = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            text += content.items.map(item => item.str).join(' ') + '\n';
+        /* Prevent elastic bounce & double-tap zoom issues on iPad */
+        body {
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
-        return text;
-    };
-
-    const extractTextFromDocx = async (file) => {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await window.mammoth.extractRawText({ arrayBuffer });
-        return result.value;
-    };
-
-    const handleProcessFiles = async (callSheetFile, scriptFile) => {
-        try {
-            if (!callSheetFile) {
-                showToast('请至少上传通告单！', 'error');
-                return;
-            }
-
-            setAppStatus('loading_deps');
-
-            let csText = '';
-            if (callSheetFile.type === 'application/pdf' || callSheetFile.name.toLowerCase().endsWith('.pdf')) {
-                csText = await extractTextFromPdf(callSheetFile);
-            } else {
-                csText = await callSheetFile.text();
-            }
-
-            let spText = '';
-            if (scriptFile) {
-                const fileName = scriptFile.name.toLowerCase();
-                if (scriptFile.type === 'application/pdf' || fileName.endsWith('.pdf')) {
-                    spText = await extractTextFromPdf(scriptFile);
-                } else if (fileName.endsWith('.docx')) {
-                    spText = await extractTextFromDocx(scriptFile);
-                } else {
-                    spText = await scriptFile.text();
-                }
-            }
-
-            let scenes = parseSceneIds(csText);
-            if (!scenes || scenes.length === 0) {
-                const fallback = parseSceneIds(spText || csText);
-                if (fallback.length > 0) {
-                    scenes = fallback;
-                    showToast('通告单未直接识别到场次，已回退到剧本结构识别。', 'error');
-                } else {
-                    showToast('未能从通告单中识别到标准场次号(如1-1、1-2A)。', 'error');
-                    scenes = [{ id: 'Uncategorized', raw: '未识别分类', index: 0 }];
-                }
-            }
-
-            const validScenes = scenes.filter(scene => scene && scene.id && scene.id !== 'Uncategorized');
-            const finalScenes = validScenes.length > 0 ? validScenes : scenes;
-            const chunks = chunkScriptByScenes(spText, finalScenes);
-
-            setCallSheetText(csText);
-            setScriptText(spText);
-            setParsedScenes(finalScenes);
-            setScriptChunks(chunks);
-            setActiveSceneId(finalScenes[0]?.id || null);
-
-            if (finalScenes.length === 1 && finalScenes[0].id === 'Uncategorized') {
-                showToast('已导入文件，但未识别到标准场次编号，请检查通告单格式。', 'error');
-            } else {
-                showToast('解析成功！已自动匹配场次与剧本。');
-            }
-            setAppStatus('workspace');
-        } catch (error) {
-            console.error(error);
-            showToast('文件解析失败，请检查是否为标准 PDF/DOCX。', 'error');
-            setAppStatus('import');
+        .selectable-text {
+            user-select: text;
+            -webkit-user-select: text;
         }
-    };
 
-    const clearData = async () => {
-        const lf = safeLocalforage();
-        if (lf) await lf.removeItem(STORAGE_KEY);
-        setCallSheetText('');
-        setScriptText('');
-        setParsedScenes([]);
-        setScriptChunks({});
-        setWorkstationData({});
-        setActiveSceneId(null);
-        setAppStatus('import');
-    };
+        /* Script Line Highlights */
+        .hl-yellow { background: rgba(245, 158, 11, 0.22); border-left: 3px solid #f59e0b; }
+        .hl-cyan { background: rgba(6, 182, 212, 0.22); border-left: 3px solid #06b6d4; }
+        .hl-rose { background: rgba(244, 63, 94, 0.22); border-left: 3px solid #f43f5e; }
+        .hl-emerald { background: rgba(16, 185, 129, 0.22); border-left: 3px solid #10b981; }
 
-    if (appStatus === 'loading_deps') {
-        return (
-            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-300">
-                <Clapperboard className="w-16 h-16 animate-bounce text-amber-500 mb-4" />
-                <h2 className="text-xl font-bold">正在初始化片场工作台...</h2>
-                <p className="text-slate-500 mt-2 text-sm">加载解析引擎与本地数据库</p>
+        .touch-btn:active { transform: scale(0.97); }
+
+        .checkerboard-bg {
+            background-color: #0b0d11;
+            background-image: radial-gradient(#232a38 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+    </style>
+</head>
+<body class="bg-studio-950 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans">
+
+    <!-- ==================== TOP STUDIO HEADER BAR ==================== -->
+    <header class="h-16 bg-studio-900 border-b border-studio-700/80 px-4 flex items-center justify-between shrink-0 z-20 shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-amber-500/20">
+                <i class="fa-solid fa-clapperboard text-studio-950 text-lg"></i>
             </div>
-        );
-    }
-
-    if (appStatus === 'import') {
-        return <ImportScreen onProcess={handleProcessFiles} toast={toast} />;
-    }
-
-    return (
-        <div className="h-screen w-screen overflow-hidden bg-slate-950 text-slate-200 flex flex-col font-sans selection:bg-amber-500/30">
-            <header className="h-14 shrink-0 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4">
-                <div className="flex items-center space-x-3">
-                    <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-1.5 rounded-lg">
-                        <Clapperboard className="w-5 h-5 text-slate-950" />
-                    </div>
-                    <h1 className="font-bold text-slate-100 hidden sm:block">片场工作台 <span className="text-slate-500 font-normal text-sm ml-2">离线存储已启用</span></h1>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h1 class="font-bold text-base md:text-lg tracking-tight text-white">片场数智工作台</h1>
+                    <span class="px-2 py-0.5 text-xs font-mono font-semibold rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30">离线安全版</span>
+                    <span class="hidden xl:inline-flex items-center px-2 py-0.5 text-xs rounded-md bg-studio-800 text-slate-300 border border-studio-700">
+                        <i class="fa-solid fa-microchip text-emerald-400 mr-1.5"></i>已开启 Retina 防锯齿
+                    </span>
                 </div>
-                <div className="flex items-center space-x-3">
-                    <button onClick={clearData} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-rose-400 hover:bg-slate-700 transition-colors flex items-center">
-                        <Trash2 className="w-4 h-4 mr-1.5" /> 重新导入
-                    </button>
-                </div>
-            </header>
-
-            <main className="flex-1 flex overflow-hidden h-[calc(100vh-3.5rem)] relative">
-                <section className="w-64 lg:w-72 flex-none bg-slate-900 border-r border-slate-800 flex flex-col">
-                    <div className="p-3 border-b border-slate-800 bg-slate-900 z-10 shadow-sm">
-                        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
-                            <FileText className="w-4 h-4 mr-1.5" /> 通告场次列表
-                        </h2>
-                        <div className="text-[11px] text-slate-500 leading-tight">从通告单自动提取，点击查看剧本与机位笔记</div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                        {parsedScenes.map((scene, idx) => (
-                            <button
-                                key={`${scene.id}-${idx}`}
-                                onClick={() => setActiveSceneId(scene.id)}
-                                className={`w-full text-left px-3 py-3 rounded-xl transition-all flex items-center justify-between ${
-                                    activeSceneId === scene.id
-                                        ? 'bg-amber-500/10 border border-amber-500/50 text-amber-400'
-                                        : 'bg-slate-800/40 border border-transparent text-slate-300 hover:bg-slate-800'
-                                }`}
-                            >
-                                <span className="font-mono font-bold text-sm">场 {scene.id}</span>
-                                {activeSceneId === scene.id && <ChevronRight className="w-4 h-4" />}
-                            </button>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="flex-1 bg-slate-950 flex flex-col border-r border-slate-800 overflow-hidden relative">
-                    <div className="p-3 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between backdrop-blur-md">
-                        <h2 className="text-sm font-bold text-cyan-400 flex items-center">
-                            <File className="w-4 h-4 mr-1.5" /> 当前场次对应剧本
-                        </h2>
-                        <span className="text-xs font-mono bg-slate-800 px-2 py-1 rounded-md text-slate-300">SCENE {activeSceneId}</span>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
-                        {scriptChunks[activeSceneId] ? (
-                            <div className="prose prose-invert prose-slate max-w-none text-base md:text-lg leading-relaxed text-slate-200 whitespace-pre-wrap font-sans">
-                                {scriptChunks[activeSceneId]}
-                            </div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-500 space-y-3">
-                                <AlertCircle className="w-12 h-12 text-slate-700" />
-                                <p>未在导入的剧本中精确匹配到场次 {activeSceneId} 的文本</p>
-                                <p className="text-xs">该场次可能是飞页或编号格式不一致</p>
-                            </div>
-                        )}
-                    </div>
-                </section>
-
-                <Workstation
-                    activeSceneId={activeSceneId}
-                    workstationData={workstationData}
-                    setWorkstationData={setWorkstationData}
-                    showToast={showToast}
-                />
-            </main>
-
-            {toast.show && (
-                <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2 text-sm font-medium transform transition-all z-50 ${
-                    toast.type === 'error' ? 'bg-rose-500 text-white' : 'bg-slate-800 border border-amber-500/50 text-amber-50'
-                }`}>
-                    {toast.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                    <span>{toast.msg}</span>
-                </div>
-            )}
-
-            <style dangerouslySetInnerHTML={{__html: `
-                .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
-            `}} />
+                <p class="text-[11px] text-slate-400 truncate max-w-md">
+                    专为 iPad Mini 6 优化 · 自动双向解析 · Apple Pencil 原生书写
+                </p>
+            </div>
         </div>
-    );
-}
 
-function ImportScreen({ onProcess, toast }) {
-    const [callSheet, setCallSheet] = useState(null);
-    const [script, setScript] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    const handleStart = async () => {
-        setIsProcessing(true);
-        await onProcess(callSheet, script);
-        setIsProcessing(false);
-    };
-
-    return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-2xl w-full shadow-2xl space-y-8">
-                <div className="text-center space-y-2">
-                    <div className="inline-flex bg-amber-500/10 p-3 rounded-2xl mb-2 border border-amber-500/20">
-                        <Clapperboard className="w-10 h-10 text-amber-500" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-slate-100">片场工作台配置</h1>
-                    <p className="text-slate-400 text-sm">导入通告单和剧本文件，应用将离线自动匹配场次联动</p>
+        <div class="hidden lg:flex items-center space-x-3 bg-studio-850 px-3.5 py-1.5 rounded-xl border border-studio-700/70">
+            <div class="text-xs w-48">
+                <div class="flex items-center justify-between space-x-4 mb-1">
+                    <span class="text-slate-400">通告进度</span>
+                    <span id="headerProgressText" class="font-mono font-bold text-emerald-400">0 / 0 场</span>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors relative ${callSheet ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-700 bg-slate-800/50 hover:border-emerald-500/40'}`}>
-                        <input
-                            type="file"
-                            accept=".pdf,.txt"
-                            onChange={e => setCallSheet(e.target.files[0])}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        <FileText className={`w-8 h-8 mx-auto mb-3 ${callSheet ? 'text-emerald-400' : 'text-slate-500'}`} />
-                        <h3 className="text-sm font-bold text-slate-200 mb-1">
-                            {callSheet ? callSheet.name : '导入通告单 (必须)'}
-                        </h3>
-                        <p className="text-xs text-slate-500">支持 PDF 格式。将通过解析提取拍摄场次。</p>
-                        {callSheet && <CheckCircle2 className="absolute top-3 right-3 w-5 h-5 text-emerald-500" />}
-                    </div>
-
-                    <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors relative ${script ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-700 bg-slate-800/50 hover:border-cyan-500/40'}`}>
-                        <input
-                            type="file"
-                            accept=".pdf,.docx,.txt"
-                            onChange={e => setScript(e.target.files[0])}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
-                        <File className={`w-8 h-8 mx-auto mb-3 ${script ? 'text-cyan-400' : 'text-slate-500'}`} />
-                        <h3 className="text-sm font-bold text-slate-200 mb-1">
-                            {script ? script.name : '导入剧本 (可选)'}
-                        </h3>
-                        <p className="text-xs text-slate-500">支持 PDF / DOCX。用于匹配场次内容。</p>
-                        {script && <CheckCircle2 className="absolute top-3 right-3 w-5 h-5 text-cyan-500" />}
-                    </div>
-                </div>
-
-                <div className="flex flex-col items-center pt-4">
-                    <button
-                        onClick={handleStart}
-                        disabled={!callSheet || isProcessing}
-                        className="w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                    >
-                        {isProcessing ? (
-                            <><Clapperboard className="w-5 h-5 mr-2 animate-spin" /> 解析与加载中...</>
-                        ) : (
-                            <><Upload className="w-5 h-5 mr-2" /> 开始构建工作台</>
-                        )}
-                    </button>
-                    {toast.show && toast.type === 'error' && (
-                        <p className="text-rose-400 text-xs mt-3 flex items-center"><AlertCircle className="w-3 h-3 mr-1"/> {toast.msg}</p>
-                    )}
+                <div class="w-full h-2 bg-studio-700 rounded-full overflow-hidden">
+                    <div id="headerProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-300" style="width: 0%"></div>
                 </div>
             </div>
         </div>
-    );
-}
 
-function Workstation({ activeSceneId, workstationData, setWorkstationData, showToast }) {
-    const activeData = workstationData[activeSceneId] || { camera: 'ARRI Alexa Mini LF', lens: '', notes: '', canvas: null };
+        <div class="flex items-center space-x-2">
+            <button onclick="openModal('crewModal')" class="touch-btn px-3 py-2 rounded-xl bg-studio-800 hover:bg-studio-700 border border-studio-700 text-xs md:text-sm font-medium text-slate-200 flex items-center space-x-1.5 transition">
+                <i class="fa-solid fa-walkie-talkie text-amber-400"></i>
+                <span class="hidden sm:inline">通告总览</span>
+            </button>
+            <button onclick="openModal('importModal')" class="touch-btn px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-studio-950 text-xs md:text-sm font-bold flex items-center space-x-1.5 transition shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid fa-file-import"></i>
+                <span class="hidden sm:inline">导入通告/剧本</span>
+            </button>
+            <button onclick="openModal('exportModal')" class="touch-btn px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-studio-950 font-bold text-xs md:text-sm flex items-center space-x-1.5 shadow-md shadow-amber-500/20 transition">
+                <i class="fa-solid fa-file-export"></i>
+                <span class="hidden sm:inline">导出报告</span>
+            </button>
+        </div>
+    </header>
 
-    const updateActiveData = (field, value) => {
-        if (!activeSceneId) return;
-        setWorkstationData(prev => ({
-            ...prev,
-            [activeSceneId]: {
-                ...(prev[activeSceneId] || { camera: 'ARRI Alexa Mini LF', lens: '', notes: '', canvas: null }),
-                [field]: value
-            }
-        }));
-    };
+    <!-- ==================== MOBILE / IPAD PORTRAIT PANEL SWITCHER ==================== -->
+    <div class="flex lg:hidden bg-studio-900 border-b border-studio-800 px-3 py-1.5 gap-2 shrink-0">
+        <button onclick="switchMobileMainTab('schedule')" id="mobTab-schedule" class="flex-1 py-2 rounded-lg text-xs font-bold bg-amber-500 text-studio-950 flex items-center justify-center space-x-1.5">
+            <i class="fa-solid fa-list-check"></i><span>通告单</span>
+        </button>
+        <button onclick="switchMobileMainTab('script')" id="mobTab-script" class="flex-1 py-2 rounded-lg text-xs font-bold bg-studio-800 text-slate-300 flex items-center justify-center space-x-1.5">
+            <i class="fa-solid fa-scroll"></i><span>剧本</span>
+        </button>
+        <button onclick="switchMobileMainTab('workspace')" id="mobTab-workspace" class="flex-1 py-2 rounded-lg text-xs font-bold bg-studio-800 text-slate-300 flex items-center justify-center space-x-1.5">
+            <i class="fa-solid fa-camera-retro"></i><span>工作区</span>
+        </button>
+    </div>
 
-    const canvasRef = useRef(null);
-    const containerRef = useRef(null);
-    const [isDrawing, setIsDrawing] = useState(false);
+    <!-- ==================== MAIN 3-COLUMN IPAD WORKSPACE ==================== -->
+    <main class="flex-1 flex overflow-hidden relative">
 
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const container = containerRef.current;
-        if (!canvas || !container || !activeSceneId) return;
-
-        const rect = container.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = 200;
-
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const cw = canvas.width;
-        const ch = canvas.height;
-        const vw = Math.round(ch * (9 / 16));
-        const vx = Math.round((cw - vw) / 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(vx, 10, vw, ch - 20);
-        ctx.setLineDash([]);
-
-        if (activeData.canvas) {
-            const img = new Image();
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0);
-            };
-            img.src = activeData.canvas;
-        }
-    }, [activeSceneId]);
-
-    const getPos = (e) => {
-        const canvas = canvasRef.current;
-        const rect = canvas.getBoundingClientRect();
-        return {
-            x: (e.clientX - rect.left) * (canvas.width / rect.width),
-            y: (e.clientY - rect.top) * (canvas.height / rect.height)
-        };
-    };
-
-    const handlePointerDown = (e) => {
-        setIsDrawing(true);
-        const ctx = canvasRef.current.getContext('2d');
-        const pos = getPos(e);
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-        e.target.setPointerCapture(e.pointerId);
-    };
-
-    const handlePointerMove = (e) => {
-        if (!isDrawing) return;
-        const ctx = canvasRef.current.getContext('2d');
-        const pos = getPos(e);
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-    };
-
-    const handlePointerUp = (e) => {
-        if (!isDrawing) return;
-        setIsDrawing(false);
-        if (e && e.target && typeof e.target.releasePointerCapture === 'function') {
-            e.target.releasePointerCapture(e.pointerId);
-        }
-        const dataUrl = canvasRef.current.toDataURL('image/png');
-        updateActiveData('canvas', dataUrl);
-    };
-
-    const clearCanvas = () => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const cw = canvas.width;
-        const ch = canvas.height;
-        const vw = Math.round(ch * (9 / 16));
-        const vx = Math.round((cw - vw) / 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(vx, 10, vw, ch - 20);
-        ctx.setLineDash([]);
-
-        updateActiveData('canvas', null);
-        showToast('画板已清空');
-    };
-
-    if (!activeSceneId) {
-        return (
-            <section className="w-80 lg:w-96 bg-slate-900 border-l border-slate-800 flex items-center justify-center text-slate-500">
-                请先在左侧选择场次
-            </section>
-        );
-    }
-
-    return (
-        <section className="w-80 xl:w-96 flex-none bg-slate-900 border-l border-slate-800 flex flex-col">
-            <div className="p-3 border-b border-slate-800 bg-slate-900 z-10 shadow-sm flex items-center justify-between">
-                <h2 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center">
-                    <Video className="w-4 h-4 mr-1.5" /> 摄影机/导演工作区
-                </h2>
-                <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 border border-slate-700">离线保存</span>
+        <!-- ========== COLUMN 1: CALL SHEET SCHEDULE (适配 mini6: w-[280px]) ========== -->
+        <section id="col-schedule" class="w-full lg:w-[280px] xl:w-[320px] bg-studio-900 border-r border-studio-800 flex flex-col shrink-0 h-full">
+            <div class="p-3 border-b border-studio-800 space-y-2.5 bg-studio-900/90">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input id="scheduleSearchInput" oninput="renderScheduleList()" type="text" placeholder="搜索场次号、内容..." 
+                        class="w-full bg-studio-850 border border-studio-700 focus:border-amber-500 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none">
+                    <button onclick="clearScheduleSearch()" id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-circle-xmark text-xs"></i>
+                    </button>
+                </div>
+                <!-- Status Filter Pills -->
+                <div class="grid grid-cols-4 gap-1 text-center">
+                    <button onclick="setStatusFilter('ALL')" id="statBtn-ALL" class="stat-filter-btn py-1.5 rounded-lg text-[11px] font-semibold bg-studio-700 text-white">全部</button>
+                    <button onclick="setStatusFilter('pending')" id="statBtn-pending" class="stat-filter-btn py-1.5 rounded-lg text-[11px] font-medium bg-studio-850 text-slate-400 hover:bg-studio-800">待拍</button>
+                    <button onclick="setStatusFilter('shooting')" id="statBtn-shooting" class="stat-filter-btn py-1.5 rounded-lg text-[11px] font-medium bg-studio-850 text-amber-400 hover:bg-studio-800">拍摄中</button>
+                    <button onclick="setStatusFilter('done')" id="statBtn-done" class="stat-filter-btn py-1.5 rounded-lg text-[11px] font-medium bg-studio-850 text-emerald-400 hover:bg-studio-800">已过</button>
+                </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
-                <div className="space-y-3 bg-slate-800/40 p-3 rounded-xl border border-slate-700/50">
-                    <div>
-                        <label className="text-xs font-bold text-slate-400 mb-1.5 flex items-center"><Camera className="w-3 h-3 mr-1"/> 摄影机机型</label>
-                        <select
-                            value={activeData.camera}
-                            onChange={(e) => updateActiveData('camera', e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 appearance-none"
-                        >
-                            <option value="ARRI Alexa Mini LF">ARRI Alexa Mini LF</option>
-                            <option value="ARRI Alexa 35">ARRI Alexa 35</option>
-                            <option value="Sony FX6">Sony FX6</option>
-                            <option value="Sony Venice 2">Sony Venice 2</option>
-                            <option value="DJI Ronin 4D">DJI Ronin 4D</option>
-                            <option value="RED V-Raptor">RED V-Raptor</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="text-xs font-bold text-slate-400 mb-1.5 flex items-center"><ImageIcon className="w-3 h-3 mr-1"/> 镜头选择</label>
-                        <select
-                            value={activeData.lens}
-                            onChange={(e) => updateActiveData('lens', e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-amber-400 font-mono focus:outline-none focus:border-amber-500 appearance-none"
-                        >
-                            <option value="">未指定镜头</option>
-                            <optgroup label="NiSi Athena Prime">
-                                <option value="NiSi 14mm T2.4">NiSi 14mm T2.4</option>
-                                <option value="NiSi 25mm T1.9">NiSi 25mm T1.9</option>
-                                <option value="NiSi 35mm T1.9">NiSi 35mm T1.9</option>
-                                <option value="NiSi 50mm T1.9">NiSi 50mm T1.9</option>
-                                <option value="NiSi 85mm T1.9">NiSi 85mm T1.9</option>
-                            </optgroup>
-                            <optgroup label="Thypoch Simera-C">
-                                <option value="Simera-C 21mm T1.5">Simera-C 21mm T1.5</option>
-                                <option value="Simera-C 28mm T1.5">Simera-C 28mm T1.5</option>
-                                <option value="Simera-C 35mm T1.5">Simera-C 35mm T1.5</option>
-                                <option value="Simera-C 50mm T1.5">Simera-C 50mm T1.5</option>
-                                <option value="Simera-C 75mm T1.5">Simera-C 75mm T1.5</option>
-                            </optgroup>
-                            <optgroup label="ARRI Signature Prime">
-                                <option value="ARRI SP 18mm T1.8">ARRI SP 18mm T1.8</option>
-                                <option value="ARRI SP 35mm T1.8">ARRI SP 35mm T1.8</option>
-                                <option value="ARRI SP 47mm T1.8">ARRI SP 47mm T1.8</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-400 flex items-center"><PenTool className="w-3 h-3 mr-1"/> 分镜/机位画板</label>
-                        <button onClick={clearCanvas} className="text-[10px] text-slate-500 hover:text-rose-400 flex items-center transition-colors">
-                            <Undo className="w-3 h-3 mr-1" /> 清空
-                        </button>
-                    </div>
-                    <div
-                        ref={containerRef}
-                        className="w-full h-[200px] rounded-xl overflow-hidden border border-slate-700 bg-slate-800 relative shadow-inner"
-                    >
-                        <canvas
-                            ref={canvasRef}
-                            onPointerDown={handlePointerDown}
-                            onPointerMove={handlePointerMove}
-                            onPointerUp={handlePointerUp}
-                            onPointerOut={handlePointerUp}
-                            style={{ touchAction: 'none' }}
-                            className="absolute inset-0 cursor-crosshair w-full h-full"
-                        />
-                        <div className="absolute bottom-1.5 right-2 text-[9px] text-slate-600 pointer-events-none font-mono">
-                            支持 Apple Pencil
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-2 flex-1 flex flex-col">
-                    <label className="text-xs font-bold text-slate-400 flex items-center"><PenLine className="w-3 h-3 mr-1"/> 现场场记与摄影笔记</label>
-                    <textarea
-                        value={activeData.notes}
-                        onChange={(e) => updateActiveData('notes', e.target.value)}
-                        placeholder="输入光比要求、走位变化、灯具选型、台词飞页..."
-                        className="w-full flex-1 min-h-[120px] bg-slate-800/40 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 leading-relaxed focus:outline-none focus:border-amber-500 resize-none"
-                    />
+            <!-- Call Sheet Scene Cards List -->
+            <div id="scheduleListContainer" class="flex-1 overflow-y-auto p-2.5 space-y-2">
+                <div class="text-center py-12 px-4 text-slate-500 text-xs">
+                    <i class="fa-solid fa-file-import text-2xl mb-2 block text-cyan-400/50"></i>
+                    请点击右上角导入通告单
                 </div>
             </div>
         </section>
-    );
-}
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(<SetTrackerApp />);
+        <!-- ========== COLUMN 2: INTERACTIVE LINKED SCRIPT VIEWER ========== -->
+        <section id="col-script" class="hidden lg:flex flex-1 bg-studio-950 flex-col h-full overflow-hidden border-r border-studio-800">
+            <div class="p-3 bg-studio-900 border-b border-studio-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                <div class="flex items-center bg-studio-850 p-1 rounded-xl border border-studio-700">
+                    <button onclick="setScriptMode('matched')" id="scriptMode-matched" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-studio-950 transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-link"></i><span>联动剧本</span>
+                    </button>
+                    <button onclick="setScriptMode('full')" id="scriptMode-full" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-book-open"></i><span>全剧检索</span>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div id="fullScriptSearchBox" class="hidden relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="fullScriptSearchInput" oninput="renderScriptPanel()" type="text" placeholder="搜索台词..." 
+                            class="bg-studio-850 border border-studio-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-100 w-32 focus:outline-none focus:border-cyan-400">
+                    </div>
+                    <div class="flex items-center bg-studio-850 rounded-xl border border-studio-700 p-0.5">
+                        <button onclick="adjustScriptFontSize(-1)" class="px-2.5 py-1 text-xs text-slate-300 hover:text-white">A-</button>
+                        <span id="fontSizeIndicator" class="text-[11px] font-mono text-slate-400 px-1">标准</span>
+                        <button onclick="adjustScriptFontSize(1)" class="px-2.5 py-1 text-xs text-slate-300 hover:text-white">A+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="activeSceneBanner" class="bg-gradient-to-r from-studio-850 via-studio-800 to-studio-850 border-b border-studio-700/80 px-4 py-3 shrink-0">
+                <div class="text-xs text-slate-400">尚未选择场次</div>
+            </div>
+
+            <div id="scriptContentContainer" class="flex-1 overflow-y-auto px-5 py-4 space-y-5 selectable-text">
+                <div class="h-full flex flex-col items-center justify-center text-slate-600 text-sm space-y-3">
+                    <i class="fa-solid fa-mug-hot text-4xl"></i>
+                    <p>导入剧本文件后，将在此处自动高亮对应场次的台词</p>
+                </div>
+            </div>
+
+            <div class="px-4 py-2 bg-studio-900/90 border-t border-studio-800 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-3 hidden sm:flex">
+                    <span>点按台词标记：</span>
+                    <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1"></span>重点</span>
+                    <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-cyan-400 mr-1"></span>机位</span>
+                    <span class="inline-flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>灯光</span>
+                </div>
+                <button onclick="scrollToTopOfScript()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-arrow-up mr-1"></i>顶部
+                </button>
+            </div>
+        </section>
+
+        <!-- ========== COLUMN 3: SCENE WORKSPACE (适配 mini6: w-[320px]) ========== -->
+        <section id="col-workspace" class="hidden lg:flex w-full lg:w-[320px] xl:w-[380px] bg-studio-900 flex-col shrink-0 h-full overflow-hidden">
+            <div class="p-2.5 bg-studio-900 border-b border-studio-800 grid grid-cols-3 gap-1.5 shrink-0">
+                <button onclick="switchWorkspaceTab('shots')" id="wsTab-shots" class="ws-tab-btn py-2 px-1 rounded-xl text-[11px] font-bold bg-amber-500 text-studio-950 flex flex-col items-center justify-center space-y-0.5 transition">
+                    <i class="fa-solid fa-sliders text-sm"></i><span>参数/场记</span>
+                </button>
+                <button onclick="switchWorkspaceTab('frames')" id="wsTab-frames" class="ws-tab-btn py-2 px-1 rounded-xl text-[11px] font-bold bg-studio-800 text-slate-300 hover:bg-studio-700 flex flex-col items-center justify-center space-y-0.5 transition">
+                    <i class="fa-solid fa-images text-sm"></i><span>截图批注</span>
+                </button>
+                <button onclick="switchWorkspaceTab('notes')" id="wsTab-notes" class="ws-tab-btn py-2 px-1 rounded-xl text-[11px] font-bold bg-studio-800 text-slate-300 hover:bg-studio-700 flex flex-col items-center justify-center space-y-0.5 transition">
+                    <i class="fa-solid fa-pen-to-square text-sm"></i><span>现场笔记</span>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-3.5 space-y-4">
+                <!-- PANEL 1: SHOTS -->
+                <div id="wsPanel-shots" class="space-y-4">
+                    <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80">
+                        <div class="flex items-center justify-between mb-2.5">
+                            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">场次状态</span>
+                            <span id="wsSceneCodeLabel" class="font-mono text-xs text-amber-400 font-bold">请先选择</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1.5">
+                            <button onclick="updateCurrentSceneStatus('pending')" id="statusOpt-pending" class="touch-btn py-2 rounded-xl text-[10px] font-bold border border-studio-700 bg-studio-800 text-slate-300 flex flex-col items-center space-y-1"><i class="fa-regular fa-clock text-sm"></i><span>待拍</span></button>
+                            <button onclick="updateCurrentSceneStatus('shooting')" id="statusOpt-shooting" class="touch-btn py-2 rounded-xl text-[10px] font-bold border border-studio-700 bg-studio-800 text-amber-400 flex flex-col items-center space-y-1"><i class="fa-solid fa-video text-sm"></i><span>拍摄中</span></button>
+                            <button onclick="updateCurrentSceneStatus('done')" id="statusOpt-done" class="touch-btn py-2 rounded-xl text-[10px] font-bold border border-studio-700 bg-studio-800 text-emerald-400 flex flex-col items-center space-y-1"><i class="fa-solid fa-circle-check text-sm"></i><span>已过</span></button>
+                            <button onclick="updateCurrentSceneStatus('backup')" id="statusOpt-backup" class="touch-btn py-2 rounded-xl text-[10px] font-bold border border-studio-700 bg-studio-800 text-violet-400 flex flex-col items-center space-y-1"><i class="fa-solid fa-hourglass-half text-sm"></i><span>飞页</span></button>
+                        </div>
+                    </div>
+
+                    <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80 space-y-3">
+                        <h3 class="text-[11px] font-bold text-cyan-400 flex items-center"><i class="fa-solid fa-camera mr-1.5"></i>摄影与灯光记录</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input id="camInput-camera" oninput="saveCameraParams()" type="text" placeholder="机型/运动 (如A机 斯坦尼康)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-cyan-400">
+                            <input id="camInput-lens" oninput="saveCameraParams()" type="text" placeholder="镜头 (如35mm)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-cyan-300 focus:outline-none focus:border-cyan-400">
+                            <input id="camInput-aperture" oninput="saveCameraParams()" type="text" placeholder="光圈/ND (如T2.0)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-amber-300 focus:outline-none focus:border-cyan-400">
+                            <input id="camInput-kelvin" oninput="saveCameraParams()" type="text" placeholder="色温/FPS (如5600K)" class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-cyan-400">
+                        </div>
+                        <input id="camInput-lighting" oninput="saveCameraParams()" type="text" placeholder="灯光笔记 (如M18窗外打冷光)..." class="w-full bg-studio-900 border border-studio-700 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-cyan-400">
+                    </div>
+
+                    <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-[11px] font-bold text-amber-400 flex items-center"><i class="fa-solid fa-clapperboard mr-1.5"></i>场记打板</h3>
+                            <button onclick="addQuickTake()" class="px-2 py-1 rounded-lg bg-amber-500 text-studio-950 font-bold text-[10px]">记一条</button>
+                        </div>
+                        <div class="grid grid-cols-12 gap-1 bg-studio-900 p-1.5 rounded-lg border border-studio-700">
+                            <input id="newTakeShot" type="text" value="1镜" placeholder="镜号" class="col-span-3 bg-studio-850 border border-studio-700 rounded text-[10px] font-mono text-center text-white">
+                            <input id="newTakeNum" type="text" value="1次" placeholder="次数" class="col-span-2 bg-studio-850 border border-studio-700 rounded text-[10px] font-mono text-center text-white">
+                            <select id="newTakeResult" class="col-span-3 bg-studio-850 border border-studio-700 rounded text-[10px] font-bold text-emerald-400">
+                                <option value="OK">✅ 保</option>
+                                <option value="BACKUP">⚠️ 备</option>
+                                <option value="NG">❌ NG</option>
+                            </select>
+                            <input id="newTakeComment" type="text" placeholder="备注" class="col-span-4 bg-studio-850 border border-studio-700 rounded px-1.5 text-[10px] text-white">
+                        </div>
+                        <div id="takesListContainer" class="space-y-1.5 max-h-48 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <!-- PANEL 2: FRAMES (PENCIL READY) -->
+                <div id="wsPanel-frames" class="hidden space-y-4">
+                    <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80 space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="cursor-pointer py-2 px-2 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-studio-950 font-bold text-[11px] flex flex-col items-center justify-center space-y-1">
+                                <i class="fa-solid fa-cloud-arrow-up text-base"></i><span>导入截图</span>
+                                <input id="screenshotFileInput" type="file" accept="image/*" multiple onchange="handleScreenshotUpload(event)" class="hidden">
+                            </label>
+                            <button onclick="openAnnotatorWithMonitorTemplate()" class="py-2 px-2 rounded-xl bg-studio-800 border border-cyan-500/40 text-cyan-300 font-bold text-[11px] flex flex-col items-center justify-center space-y-1">
+                                <i class="fa-solid fa-compass-drafting text-base"></i><span>新建机位画板</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="framesGalleryContainer" class="space-y-3"></div>
+                </div>
+
+                <!-- PANEL 3: NOTES -->
+                <div id="wsPanel-notes" class="hidden space-y-4">
+                    <div class="bg-studio-850 p-3 rounded-2xl border border-studio-700/80 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-amber-400">现场综合笔记</h3>
+                            <button onclick="insertTimestampToNote()" class="px-2 py-1 rounded bg-studio-800 text-[10px] text-slate-300 border border-studio-700">+ 当前时间</button>
+                        </div>
+                        <textarea id="sceneNoteTextarea" oninput="saveSceneNotes()" rows="12" 
+                            placeholder="在此输入导演要求、连戏细节..."
+                            class="w-full bg-studio-900 border border-studio-700 focus:border-amber-500 rounded-xl p-3 text-sm text-slate-100 leading-relaxed focus:outline-none selectable-text"></textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODAL 1: RETINA ANNOTATOR (APPLE PENCIL 专属优化) ==================== -->
+    <div id="annotatorModal" class="fixed inset-0 bg-black/95 z-50 hidden flex-col">
+        <div class="h-14 bg-studio-900 border-b border-studio-700 px-4 flex items-center justify-between shrink-0">
+            <div class="flex items-center space-x-3">
+                <span class="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 font-mono text-xs font-bold" id="annotatorSceneBadge">顺1</span>
+                <input id="annotatorCaptionInput" type="text" placeholder="截图说明..." 
+                    class="bg-studio-800 border border-studio-700 rounded-xl px-3 py-1 text-xs text-white w-40 md:w-64 focus:outline-none focus:border-cyan-400">
+            </div>
+
+            <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
+                <button onclick="setDrawTool('pen')" id="toolBtn-pen" class="draw-tool-btn px-2.5 py-1.5 rounded-lg bg-amber-500 text-studio-950 text-xs font-bold shrink-0"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="setDrawTool('arrow')" id="toolBtn-arrow" class="draw-tool-btn px-2.5 py-1.5 rounded-lg bg-studio-800 text-slate-200 text-xs font-medium shrink-0"><i class="fa-solid fa-arrow-up-right-dots"></i></button>
+                <button onclick="stampIconOnCanvas('🎥 A机')" class="px-2.5 py-1.5 rounded-lg bg-studio-800 text-xs text-cyan-300 border border-studio-700 shrink-0">🎥</button>
+                <button onclick="stampIconOnCanvas('💡 主光')" class="px-2.5 py-1.5 rounded-lg bg-studio-800 text-xs text-amber-300 border border-studio-700 shrink-0">💡</button>
+                <div class="flex items-center space-x-1 pl-2 border-l border-studio-700 shrink-0">
+                    <button onclick="setDrawColor('#f59e0b')" class="w-6 h-6 rounded-full bg-amber-500 ring-2 ring-white"></button>
+                    <button onclick="setDrawColor('#06b6d4')" class="w-6 h-6 rounded-full bg-cyan-400"></button>
+                    <button onclick="setDrawColor('#f43f5e')" class="w-6 h-6 rounded-full bg-rose-500"></button>
+                </div>
+                <button onclick="undoCanvasStroke()" class="px-2.5 py-1.5 rounded-lg bg-studio-800 text-slate-300 shrink-0"><i class="fa-solid fa-rotate-left"></i></button>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button onclick="closeAnnotatorModal()" class="px-3 py-1.5 rounded-xl bg-studio-800 text-slate-300 text-xs font-medium">取消</button>
+                <button onclick="saveAnnotatedCanvas()" class="px-3 py-1.5 rounded-xl bg-emerald-500 text-studio-950 font-bold text-xs flex items-center shadow-lg"><i class="fa-solid fa-floppy-disk mr-1"></i>保存</button>
+            </div>
+        </div>
+
+        <div class="flex-1 checkerboard-bg flex items-center justify-center overflow-hidden p-4 relative">
+            <!-- Canvas is visually sized by CSS, but internal resolution will be scaled for Retina -->
+            <canvas id="annotatorCanvas" class="shadow-2xl border border-studio-700 touch-none cursor-crosshair max-w-full max-h-full object-contain" style="border-radius: 8px;"></canvas>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: DYNAMIC IMPORT (本地文件智能提取) ==================== -->
+    <div id="importModal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-studio-900 border border-studio-700 rounded-3xl max-w-2xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-6 text-center border-b border-studio-800">
+                <div class="inline-flex bg-cyan-500/10 p-3 rounded-2xl mb-2 border border-cyan-500/20">
+                    <i class="fa-solid fa-wand-magic-sparkles text-2xl text-cyan-400"></i>
+                </div>
+                <h2 class="text-xl font-bold text-white">智能导入与解析</h2>
+                <p class="text-xs text-slate-400 mt-1">本地处理，绝对安全。请在下方选择对应的 PDF 或 Word 文件</p>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Call Sheet Input -->
+                    <div class="border-2 border-dashed border-studio-700 bg-studio-850 rounded-2xl p-5 text-center relative hover:bg-studio-800 transition">
+                        <input id="fileCallSheet" type="file" accept=".pdf,.txt,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="updateFileName('fileCallSheet', 'labelCallSheet')"/>
+                        <i class="fa-solid fa-file-pdf text-3xl text-emerald-400 mb-2"></i>
+                        <h3 id="labelCallSheet" class="text-sm font-bold text-slate-200">1. 选择通告单</h3>
+                        <p class="text-[10px] text-slate-500 mt-1">支持 PDF/Word，用于提取拍摄场次顺序</p>
+                    </div>
+
+                    <!-- Script Input -->
+                    <div class="border-2 border-dashed border-studio-700 bg-studio-850 rounded-2xl p-5 text-center relative hover:bg-studio-800 transition">
+                        <input id="fileScript" type="file" accept=".pdf,.docx,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="updateFileName('fileScript', 'labelScript')"/>
+                        <i class="fa-solid fa-file-word text-3xl text-cyan-400 mb-2"></i>
+                        <h3 id="labelScript" class="text-sm font-bold text-slate-200">2. 选择剧本 (可选)</h3>
+                        <p class="text-[10px] text-slate-500 mt-1">支持 Word/PDF，根据场次号自动切片联动</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center pt-2">
+                    <button onclick="handleDynamicImport()" class="w-full px-6 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg hover:opacity-90 transition flex items-center justify-center">
+                        <i id="importSpinner" class="fa-solid fa-rocket mr-2"></i> 开始解析构建工作台
+                    </button>
+                    <button onclick="closeModal('importModal')" class="mt-4 text-xs text-slate-500 hover:text-white">取消关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals (Crew & Export remain lightweight) -->
+    <div id="crewModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-studio-900 border border-studio-700 rounded-2xl max-w-xl w-full flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-studio-800 flex justify-between items-center"><h2 class="font-bold">剧组通告总览</h2><button onclick="closeModal('crewModal')"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="p-6 text-sm text-slate-400 text-center">如需查看特定剧组通讯录，请自定义本模块内容，或直接使用系统通讯录功能。</div>
+        </div>
+    </div>
+    
+    <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-studio-900 border border-studio-700 rounded-2xl max-w-xl w-full flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-studio-800 flex justify-between items-center"><h2 class="font-bold">导出进度与日报</h2><button onclick="closeModal('exportModal')"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="p-6 flex flex-col gap-3">
+                <button onclick="copyTextSummaryToClipboard()" class="py-3 bg-studio-800 rounded-xl text-sm font-bold text-white"><i class="fa-solid fa-copy mr-2"></i>复制文字版收工日报</button>
+                <button onclick="resetAllDataConfirm()" class="py-3 bg-rose-500/10 text-rose-400 rounded-xl text-sm font-bold mt-4"><i class="fa-solid fa-trash mr-2"></i>清空所有缓存数据</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUPS & TOASTS -->
+    <div id="linePopover" class="fixed z-40 hidden bg-studio-850 border border-amber-500/60 rounded-2xl shadow-2xl p-2.5 w-64 space-y-2">
+        <div class="flex justify-between items-center text-xs font-bold text-amber-400"><span>添加台词标记</span><button onclick="closeLinePopover()"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="grid grid-cols-4 gap-1">
+            <button onclick="applyLineHighlight('hl-yellow')" class="py-1 bg-amber-500/20 text-amber-300 text-[10px] rounded">情绪</button>
+            <button onclick="applyLineHighlight('hl-cyan')" class="py-1 bg-cyan-500/20 text-cyan-300 text-[10px] rounded">机位</button>
+            <button onclick="applyLineHighlight('hl-emerald')" class="py-1 bg-emerald-500/20 text-emerald-300 text-[10px] rounded">灯光</button>
+            <button onclick="applyLineHighlight('')" class="py-1 bg-studio-800 text-slate-400 text-[10px] rounded">清除</button>
+        </div>
+    </div>
+
+    <div id="toastNotification" class="fixed bottom-5 right-5 z-50 hidden bg-studio-800 border border-amber-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2 text-xs font-medium">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i><span id="toastMessage">已保存</span>
+    </div>
+
+    <!-- ==================== CORE JAVASCRIPT ==================== -->
+    <script>
+        const STORAGE_KEY_STATE = "CINEPAD_DYNAMIC_V2";
+        let appState = {
+            callSheet: [],
+            scripts: {},
+            lineAnnotations: {},
+            selectedOrder: 1,
+            locationFilter: 'ALL',
+            statusFilter: 'ALL',
+            scriptMode: 'matched',
+            scriptFontSize: 0
+        };
+        let sceneFramesMap = {}; // Will be kept in memory for this demo (or use IndexedDB)
+
+        function loadAppState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_STATE);
+                if (raw) {
+                    appState = JSON.parse(raw);
+                } else {
+                    // Start empty to force import
+                    appState.callSheet = [];
+                    appState.scripts = {};
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function saveAppState() {
+            localStorage.setItem(STORAGE_KEY_STATE, JSON.stringify(appState));
+        }
+
+        function getCurrentScene() {
+            return appState.callSheet.find(s => s.order === appState.selectedOrder) || appState.callSheet[0] || null;
+        }
+
+        // ==================== OPTIMIZATION 1 & 3: FILE PARSING ENGINES ====================
+        async function extractTextFromPdf(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            let text = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                // 确保 PDF 表格间隙保留换行符，防止列数据被吞并
+                text += content.items.map(item => item.str).join("  ") + "\n"; 
+            }
+            return text;
+        }
+
+        async function extractTextFromDocx(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            return result.value;
+        }
+
+        function parseSceneIds(text) {
+            // 优化1核心：支持剧本(1-1)和通告单断裂表格(7 2 游泳馆)的双向抓取
+            const regex = /(?:第\s*(\d+)\s*场|场次\s*(\d+(?:-\d+[A-Za-z]?)?)|场\s*(\d+(?:-\d+[A-Za-z]?)?)|\b(\d+-\d+[A-Za-z]?)\b|(?:\b|\n)\s*(\d+)\s+(\d+[A-Za-z]?)\s+(?:[\u4e00-\u9fa5]{2,}))/g;
+            const matches = [...text.matchAll(regex)];
+            const scenes = [];
+            const uniqueIds = new Set();
+
+            matches.forEach(match => {
+                let id = null;
+                if (match[4]) id = match[4]; // 匹配 "1-1"
+                else if (match[1]) id = match[1]; // 匹配 "第1场"
+                else if (match[2]) id = match[2]; // 匹配 "场次1"
+                else if (match[3]) id = match[3]; // 匹配 "场1"
+                else if (match[5] && match[6]) id = `${match[5]}-${match[6]}`; // 将表格中断裂的 "7 2" 缝合成 "7-2"
+
+                if (id && !uniqueIds.has(id)) {
+                    uniqueIds.add(id);
+                    scenes.push({ id, raw: match[0].trim(), index: match.index });
+                }
+            });
+            return scenes;
+        }
+
+        function chunkScriptByScenes(scriptTxt, extractedScenes) {
+            const chunks = {};
+            if (!scriptTxt || extractedScenes.length === 0) return chunks;
+
+            const positions = [];
+            extractedScenes.forEach(scene => {
+                // 优化3核心：添加 (?:^|\n) 和 [\s\S] 前瞻边界，防止台词里的 1-1 误触截断
+                const escapedId = scene.id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                const searchRegex = new RegExp(`(?:^|\\n)\\s*(?:第\\s*${escapedId}\\s*场|场次\\s*${escapedId}|${escapedId})[\\s\\S]`, 'i');
+                const match = scriptTxt.match(searchRegex);
+                if (match) {
+                    positions.push({ id: scene.id, index: match.index });
+                }
+            });
+
+            positions.sort((a, b) => a.index - b.index);
+            for (let i = 0; i < positions.length; i++) {
+                const curr = positions[i];
+                const next = positions[i + 1];
+                const startIdx = curr.index;
+                const endIdx = next ? next.index : scriptTxt.length;
+                chunks[curr.id] = scriptTxt.substring(startIdx, endIdx).trim();
+            }
+            return chunks;
+        }
+
+        function updateFileName(inputId, labelId) {
+            const file = document.getElementById(inputId).files[0];
+            if (file) {
+                document.getElementById(labelId).textContent = file.name;
+                document.getElementById(labelId).classList.add('text-emerald-400');
+            }
+        }
+
+        async function handleDynamicImport() {
+            const callSheetFile = document.getElementById('fileCallSheet').files[0];
+            const scriptFile = document.getElementById('fileScript').files[0];
+            const spinner = document.getElementById('importSpinner');
+
+            if (!callSheetFile) {
+                showToast("请至少选择一个通告单文件！");
+                return;
+            }
+
+            spinner.classList.replace('fa-rocket', 'fa-spinner');
+            spinner.classList.add('fa-spin');
+
+            try {
+                // 提取通告文本
+                let csText = callSheetFile.type === 'application/pdf' ? await extractTextFromPdf(callSheetFile) : await (callSheetFile.name.endsWith('.docx') ? extractTextFromDocx(callSheetFile) : callSheetFile.text());
+                
+                // 提取剧本文本
+                let spText = "";
+                if (scriptFile) {
+                    spText = scriptFile.type === 'application/pdf' ? await extractTextFromPdf(scriptFile) : await (scriptFile.name.endsWith('.docx') ? extractTextFromDocx(scriptFile) : scriptFile.text());
+                }
+
+                const scenes = parseSceneIds(csText);
+                if (scenes.length === 0) {
+                    showToast("未发现场次号，请确保排版包含类似 '1-1' 格式的字样");
+                    spinner.classList.replace('fa-spinner', 'fa-rocket');
+                    spinner.classList.remove('fa-spin');
+                    return;
+                }
+
+                // 切割剧本
+                const chunks = chunkScriptByScenes(spText, scenes);
+
+                // 映射到工作台数据结构
+                appState.callSheet = scenes.map((s, idx) => ({
+                    order: idx + 1,
+                    sceneId: s.id,
+                    scriptKey: s.id,
+                    mainSet: "导入提取",
+                    subSet: "解析场景",
+                    atmosphere: "机动",
+                    pages: 0,
+                    summary: "自动解析场次",
+                    cast: [],
+                    props: "",
+                    timeSlot: "-",
+                    status: "pending",
+                    cameraParams: { camera: "A机", lens: "", aperture: "", kelvin: "", lighting: "" },
+                    takes: [],
+                    notes: ""
+                }));
+
+                appState.scripts = {};
+                for (const [id, text] of Object.entries(chunks)) {
+                    appState.scripts[id] = {
+                        title: `场次 ${id}`,
+                        episode: "导入剧本片段",
+                        lines: text.split('\n').filter(l => l.trim().length > 0)
+                    };
+                }
+
+                appState.selectedOrder = 1;
+                saveAppState();
+                
+                closeModal('importModal');
+                refreshAllViews();
+                showToast(`成功解析 ${scenes.length} 场戏！`);
+
+            } catch (error) {
+                console.error(error);
+                showToast("解析出错，请确保是标准的PDF/Word文档");
+            }
+
+            spinner.classList.replace('fa-spinner', 'fa-rocket');
+            spinner.classList.remove('fa-spin');
+        }
+
+        // ==================== UI RENDERING ====================
+        function refreshAllViews() {
+            updateProgressHeader();
+            renderScheduleList();
+            renderScriptPanel();
+            renderWorkspacePanel();
+        }
+
+        function updateProgressHeader() {
+            const total = appState.callSheet.length;
+            const done = appState.callSheet.filter(s => s.status === 'done').length;
+            document.getElementById('headerProgressText').textContent = `${done} / ${total} 场`;
+            document.getElementById('headerProgressBar').style.width = total > 0 ? `${(done/total)*100}%` : '0%';
+        }
+
+        function renderScheduleList() {
+            const container = document.getElementById('scheduleListContainer');
+            if (appState.callSheet.length === 0) return;
+
+            const query = (document.getElementById('scheduleSearchInput').value || '').trim().toLowerCase();
+            const filtered = appState.callSheet.filter(item => {
+                if (appState.statusFilter !== 'ALL' && item.status !== appState.statusFilter) return false;
+                if (query && !`${item.sceneId} ${item.summary}`.toLowerCase().includes(query)) return false;
+                return true;
+            });
+
+            container.innerHTML = filtered.map(item => {
+                const isSelected = item.order === appState.selectedOrder;
+                let statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-studio-700 text-slate-300">待拍</span>`;
+                if (item.status === 'shooting') statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/20 text-amber-400">拍摄中</span>`;
+                else if (item.status === 'done') statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-400">已过</span>`;
+
+                return `
+                <div onclick="selectSceneByOrder(${item.order})" 
+                    class="touch-btn cursor-pointer rounded-xl p-2.5 transition border ${isSelected ? 'bg-studio-800 border-amber-500 shadow-md' : 'bg-studio-850/90 border-studio-800'}">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center space-x-1.5">
+                            <span class="px-1.5 py-0.5 rounded bg-studio-950 text-slate-400 font-mono text-[9px]">顺${item.order}</span>
+                            <span class="font-mono font-bold text-sm ${isSelected ? 'text-amber-400' : 'text-white'}">场 ${item.sceneId}</span>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <div class="text-xs text-slate-300 truncate">${item.summary}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function selectSceneByOrder(order) {
+            appState.selectedOrder = order;
+            saveAppState();
+            refreshAllViews();
+            if (window.innerWidth < 1024) switchMobileMainTab('script');
+        }
+
+        function renderScriptPanel() {
+            const scene = getCurrentScene();
+            const container = document.getElementById('scriptContentContainer');
+            const banner = document.getElementById('activeSceneBanner');
+
+            if (!scene) {
+                banner.innerHTML = `<div class="text-xs text-slate-400">请导入通告单</div>`;
+                return;
+            }
+
+            banner.innerHTML = `<div class="flex justify-between items-center"><span class="px-2.5 py-1 rounded bg-amber-500 text-studio-950 font-bold text-xs">当前: 场次 ${scene.sceneId}</span></div>`;
+
+            const scriptObj = appState.scripts[scene.scriptKey];
+            if (!scriptObj) {
+                container.innerHTML = `<div class="text-center py-12 text-slate-500 text-sm">未能匹配到场次 ${scene.sceneId} 的剧本内容，请确认剧本中包含该场次。</div>`;
+                return;
+            }
+
+            const fontSizeClasses = ['text-xs', 'text-sm', 'text-base', 'text-lg'];
+            const textSizeClass = fontSizeClasses[Math.max(0, Math.min(3, appState.scriptFontSize + 1))];
+
+            container.innerHTML = scriptObj.lines.map((lineText, lineIdx) => {
+                const annKey = `${scene.scriptKey}_${lineIdx}`;
+                const hlClass = (appState.lineAnnotations[annKey] || {}).highlight || '';
+                return `<div onclick="openLineAnnotationPopover(event, '${scene.scriptKey}', ${lineIdx})" class="cursor-pointer rounded px-2 py-1.5 transition hover:bg-studio-800/80 ${hlClass}">
+                    <p class="${textSizeClass} leading-relaxed text-slate-200">${escapeHtml(lineText)}</p>
+                </div>`;
+            }).join('');
+        }
+
+        function renderWorkspacePanel() {
+            const scene = getCurrentScene();
+            if(!scene) return;
+            document.getElementById('wsSceneCodeLabel').textContent = `顺${scene.order} · 场 ${scene.sceneId}`;
+            ['pending', 'shooting', 'done', 'backup'].forEach(st => {
+                const btn = document.getElementById(`statusOpt-${st}`);
+                btn.classList.toggle('bg-studio-700', scene.status === st);
+                btn.classList.toggle('ring-1', scene.status === st);
+                btn.classList.toggle('ring-amber-400', scene.status === st);
+            });
+
+            const cp = scene.cameraParams || {};
+            document.getElementById('camInput-camera').value = cp.camera || '';
+            document.getElementById('camInput-lens').value = cp.lens || '';
+            document.getElementById('camInput-aperture').value = cp.aperture || '';
+            document.getElementById('camInput-kelvin').value = cp.kelvin || '';
+            document.getElementById('camInput-lighting').value = cp.lighting || '';
+            document.getElementById('sceneNoteTextarea').value = scene.notes || '';
+            
+            renderFramesGallery();
+        }
+
+        // ==================== OPTIMIZATION 2: RETINA CANVAS FOR APPLE PENCIL ====================
+        let annotatorCanvas = null;
+        let annotatorCtx = null;
+        let currentDrawTool = 'pen';
+        let currentDrawColor = '#f59e0b';
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+        let dpr = 1; // Device Pixel Ratio for Retina
+
+        function initAnnotatorCanvas() {
+            annotatorCanvas = document.getElementById('annotatorCanvas');
+            annotatorCtx = annotatorCanvas.getContext('2d');
+            dpr = window.devicePixelRatio || 1; // 抓取 iPad mini 的像素倍率(通常是 2)
+
+            const getLogicalPos = (e) => {
+                const rect = annotatorCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                // 返回相对于逻辑像素的坐标 (无视物理分辨率)
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            };
+
+            const startDraw = (e) => {
+                e.preventDefault();
+                isDrawing = true;
+                const pos = getLogicalPos(e);
+                lastX = pos.x; lastY = pos.y;
+                if(currentDrawTool === 'pen') {
+                    annotatorCtx.beginPath();
+                    annotatorCtx.moveTo(lastX, lastY);
+                }
+            };
+
+            const moveDraw = (e) => {
+                if (!isDrawing) return;
+                e.preventDefault();
+                const pos = getLogicalPos(e);
+                if (currentDrawTool === 'pen') {
+                    annotatorCtx.strokeStyle = currentDrawColor;
+                    annotatorCtx.lineWidth = 3;
+                    annotatorCtx.lineCap = 'round';
+                    annotatorCtx.lineJoin = 'round';
+                    annotatorCtx.lineTo(pos.x, pos.y);
+                    annotatorCtx.stroke();
+                }
+            };
+
+            const endDraw = (e) => {
+                if(isDrawing) isDrawing = false;
+            };
+
+            annotatorCanvas.addEventListener('pointerdown', startDraw);
+            annotatorCanvas.addEventListener('pointermove', moveDraw);
+            window.addEventListener('pointerup', endDraw);
+        }
+
+        function setupRetinaCanvas(logicalWidth, logicalHeight) {
+            // 优化2核心：让 Canvas 的物理像素匹配屏幕 DPI，CSS 尺寸保持逻辑大小
+            annotatorCanvas.width = logicalWidth * dpr;
+            annotatorCanvas.height = logicalHeight * dpr;
+            annotatorCanvas.style.width = `${logicalWidth}px`;
+            annotatorCanvas.style.height = `${logicalHeight}px`;
+            annotatorCtx.scale(dpr, dpr); // 缩放绘图上下文，之后的绘图指令使用逻辑尺寸即可
+        }
+
+        function openAnnotatorWithMonitorTemplate() {
+            const scene = getCurrentScene();
+            if(!scene) return;
+            document.getElementById('annotatorSceneBadge').textContent = `场 ${scene.sceneId}`;
+            const modal = document.getElementById('annotatorModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            const logW = Math.min(window.innerWidth - 60, 800);
+            const logH = logW * 9 / 16;
+            setupRetinaCanvas(logW, logH);
+
+            const ctx = annotatorCtx;
+            ctx.fillStyle = '#10141d';
+            ctx.fillRect(0, 0, logW, logH);
+            
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(logW/3, 0); ctx.lineTo(logW/3, logH); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(logW*2/3, 0); ctx.lineTo(logW*2/3, logH); ctx.stroke();
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '12px monospace';
+            ctx.fillText(`REC ● SCENE: ${scene.sceneId}`, 10, 20);
+        }
+
+        function saveAnnotatedCanvas() {
+            // 保存全分辨率的高清图片
+            const dataUrl = annotatorCanvas.toDataURL('image/jpeg', 0.9);
+            const scene = getCurrentScene();
+            if (!sceneFramesMap[scene.sceneId]) sceneFramesMap[scene.sceneId] = [];
+            sceneFramesMap[scene.sceneId].unshift({
+                dataUrl: dataUrl,
+                caption: document.getElementById('annotatorCaptionInput').value || '机位草图',
+                timestamp: new Date().toLocaleTimeString('it-IT').substring(0,5)
+            });
+            closeModal('annotatorModal');
+            renderFramesGallery();
+            showToast("已保存高清视网膜画板");
+        }
+
+        // ==================== UTIL FUNCTIONS ====================
+        let activeLineAnnotationTarget = null;
+        function openLineAnnotationPopover(e, scriptKey, lineIndex) {
+            e.stopPropagation();
+            activeLineAnnotationTarget = { scriptKey, lineIndex };
+            const popover = document.getElementById('linePopover');
+            popover.classList.remove('hidden');
+            popover.style.left = `${Math.min(window.innerWidth - 280, e.clientX)}px`;
+            popover.style.top = `${e.clientY + 10}px`;
+        }
+        function closeLinePopover() { document.getElementById('linePopover').classList.add('hidden'); }
+        function applyLineHighlight(hlClass) {
+            if(!activeLineAnnotationTarget) return;
+            const key = `${activeLineAnnotationTarget.scriptKey}_${activeLineAnnotationTarget.lineIndex}`;
+            if (!appState.lineAnnotations[key]) appState.lineAnnotations[key] = {};
+            appState.lineAnnotations[key].highlight = hlClass;
+            saveAppState(); renderScriptPanel(); closeLinePopover();
+        }
+
+        function updateCurrentSceneStatus(st) {
+            const sc = getCurrentScene(); if(!sc) return;
+            sc.status = st; saveAppState(); refreshAllViews();
+        }
+        function saveCameraParams() {
+            const sc = getCurrentScene(); if(!sc) return;
+            sc.cameraParams = {
+                camera: document.getElementById('camInput-camera').value,
+                lens: document.getElementById('camInput-lens').value,
+                aperture: document.getElementById('camInput-aperture').value,
+                kelvin: document.getElementById('camInput-kelvin').value,
+                lighting: document.getElementById('camInput-lighting').value
+            }; saveAppState();
+        }
+        function saveSceneNotes() {
+            const sc = getCurrentScene(); if(!sc) return;
+            sc.notes = document.getElementById('sceneNoteTextarea').value; saveAppState(); renderScheduleList();
+        }
+
+        function setDrawTool(tool) { currentDrawTool = tool; }
+        function setDrawColor(c) { currentDrawColor = c; }
+        function closeAnnotatorModal() { closeModal('annotatorModal'); }
+
+        function renderFramesGallery() {
+            const scene = getCurrentScene();
+            if(!scene) return;
+            const frames = sceneFramesMap[scene.sceneId] || [];
+            const gallery = document.getElementById('framesGalleryContainer');
+            if(frames.length===0){ gallery.innerHTML = `<div class="text-center text-xs text-slate-500 py-6">无截图</div>`; return;}
+            gallery.innerHTML = frames.map(f => `<div class="bg-black rounded border border-studio-700 p-1 mb-2"><img src="${f.dataUrl}" class="w-full h-auto"><div class="text-[10px] text-cyan-300 mt-1">${escapeHtml(f.caption)}</div></div>`).join('');
+        }
+
+        function switchMobileMainTab(tab) {
+            ['schedule', 'script', 'workspace'].forEach(t => {
+                const btn = document.getElementById(`mobTab-${t}`);
+                const col = document.getElementById(`col-${t}`);
+                if (t === tab) {
+                    btn.classList.replace('bg-studio-800', 'bg-amber-500');
+                    btn.classList.replace('text-slate-300', 'text-studio-950');
+                    col.classList.remove('hidden'); col.classList.add('flex');
+                } else {
+                    btn.classList.replace('bg-amber-500', 'bg-studio-800');
+                    btn.classList.replace('text-studio-950', 'text-slate-300');
+                    col.classList.add('hidden'); col.classList.remove('flex');
+                }
+            });
+        }
+        function switchWorkspaceTab(tabName) {
+            ['shots', 'frames', 'notes'].forEach(t => {
+                document.getElementById(`wsTab-${t}`).classList.toggle('bg-amber-500', t === tabName);
+                document.getElementById(`wsTab-${t}`).classList.toggle('text-studio-950', t === tabName);
+                document.getElementById(`wsTab-${t}`).classList.toggle('bg-studio-800', t !== tabName);
+                document.getElementById(`wsPanel-${t}`).style.display = t === tabName ? 'block' : 'none';
+            });
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+        function showToast(msg) {
+            const t = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').textContent = msg;
+            t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 2500);
+        }
+        function escapeHtml(str) { return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+        function resetAllDataConfirm() { localStorage.removeItem(STORAGE_KEY_STATE); location.reload(); }
+        function adjustScriptFontSize(d) { appState.scriptFontSize = Math.max(-1, Math.min(2, appState.scriptFontSize + d)); renderScriptPanel(); }
+        function setStatusFilter(stat) { appState.statusFilter = stat; renderScheduleList(); }
+        function clearScheduleSearch() { document.getElementById('scheduleSearchInput').value = ''; renderScheduleList(); }
+        function copyTextSummaryToClipboard() {
+            showToast("功能准备中，暂需调用浏览器API");
+        }
+
+        window.onload = function () {
+            loadAppState();
+            initAnnotatorCanvas();
+            refreshAllViews();
+            
+            // 如果空空如也，主动弹开导入框
+            if(appState.callSheet.length === 0) {
+                openModal('importModal');
+            }
+        };
     </script>
 </body>
 </html>
