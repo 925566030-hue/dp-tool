@@ -31,7 +31,7 @@
         // ⬇️ 请把你昨天生成的那一大段 React 代码，完整粘贴在这个区域 ⬇️
         // （代码开头应该是 import React... 结尾是组件的最后一个大括号 }）
         // ========================================== //
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     Upload, FileText, File, Video, Camera, Image as ImageIcon, 
     PenTool, Save, Trash2, ChevronRight, AlertCircle, CheckCircle2, 
@@ -64,6 +64,8 @@ const CDNS = {
 
 const STORAGE_KEY = 'cine_set_tracker_v2';
 
+const safeLocalforage = () => (window && window.localforage ? window.localforage : null);
+
 export default function SetTrackerApp() {
     // ==========================================
     // 2. APP STATE MANAGEMENT
@@ -84,6 +86,11 @@ export default function SetTrackerApp() {
     // ==========================================
     // 3. INITIALIZATION & STORAGE
     // ==========================================
+    const showToast = (msg, type = 'info') => {
+        setToast({ show: true, msg, type });
+        setTimeout(() => setToast({ show: false, msg: '', type: 'info' }), 3000);
+    };
+
     useEffect(() => {
         const initApp = async () => {
             try {
@@ -94,26 +101,34 @@ export default function SetTrackerApp() {
                 await loadScript(CDNS.mammoth);
 
                 // Initialize localforage
-                window.localforage.config({
-                    name: 'SetTrackerDB',
-                    storeName: 'workstation_store'
-                });
+                if (safeLocalforage()) {
+                    window.localforage.config({
+                        name: 'SetTrackerDB',
+                        storeName: 'workstation_store'
+                    });
+                }
 
                 // Load existing data if available
-                const savedData = await window.localforage.getItem(STORAGE_KEY);
-                if (savedData && savedData.parsedScenes && savedData.parsedScenes.length > 0) {
-                    setCallSheetText(savedData.callSheetText || '');
-                    setScriptText(savedData.scriptText || '');
-                    setParsedScenes(savedData.parsedScenes || []);
-                    setScriptChunks(savedData.scriptChunks || {});
-                    setWorkstationData(savedData.workstationData || {});
-                    setActiveSceneId(savedData.activeSceneId || savedData.parsedScenes[0]?.id || null);
-                    setAppStatus('workspace');
-                } else {
-                    setAppStatus('import');
+                const lf = safeLocalforage();
+                if (lf) {
+                    const savedData = await lf.getItem(STORAGE_KEY);
+                    if (savedData && savedData.parsedScenes && savedData.parsedScenes.length > 0) {
+                        setCallSheetText(savedData.callSheetText || '');
+                        setScriptText(savedData.scriptText || '');
+                        setParsedScenes(savedData.parsedScenes || []);
+                        setScriptChunks(savedData.scriptChunks || {});
+                        setWorkstationData(savedData.workstationData || {});
+                        setActiveSceneId(savedData.activeSceneId || savedData.parsedScenes[0]?.id || null);
+                        setAppStatus('workspace');
+                        return;
+                    }
                 }
+
+                setAppStatus('import');
             } catch (err) {
+                console.error(err);
                 showToast('依赖加载失败，请检查网络后再试。', 'error');
+                setAppStatus('import');
             }
         };
         initApp();
@@ -121,7 +136,7 @@ export default function SetTrackerApp() {
 
     // Auto-save data when specific states change
     useEffect(() => {
-        if (appStatus === 'workspace') {
+        if (appStatus === 'workspace' && safeLocalforage()) {
             const dataToSave = {
                 callSheetText,
                 scriptText,
@@ -130,14 +145,9 @@ export default function SetTrackerApp() {
                 workstationData,
                 activeSceneId
             };
-            window.localforage.setItem(STORAGE_KEY, dataToSave).catch(e => console.error("Save failed", e));
+            safeLocalforage().setItem(STORAGE_KEY, dataToSave).catch(e => console.error('Save failed', e));
         }
     }, [callSheetText, scriptText, parsedScenes, scriptChunks, workstationData, activeSceneId, appStatus]);
-
-    const showToast = (msg, type = 'info') => {
-        setToast({ show: true, msg, type });
-        setTimeout(() => setToast({ show: false, msg: '', type: 'info' }), 3000);
-    };
 
     // ==========================================
     // 4. PARSER ENGINE (REGEX & TEXT EXTRACTION)
@@ -145,11 +155,11 @@ export default function SetTrackerApp() {
     const extractTextFromPdf = async (file) => {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await window.pdfjsLib.getDocument(arrayBuffer).promise;
-        let text = "";
+        let text = '';
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            text += content.items.map(item => item.str).join(" ") + "\n";
+            text += content.items.map(item => item.str).join(' ') + '\n';
         }
         return text;
     };
@@ -160,43 +170,105 @@ export default function SetTrackerApp() {
         return result.value;
     };
 
-    // 替换原来的解析引擎代码
-const parseSceneIds = (text, isCallSheet = false) => {
-    // 如果是剧本，寻找 "1-1" 或 "1-2A" 格式
-    const scriptRegex = /(?:^|\n)\s*(\d+)-(\d+[A-Za-z]?)\s+/g;
-    // 如果是通告单（PDF表格提取），寻找连续的两个数字，例如 "1 2" 或 "1 2A"
-    const callSheetRegex = /\b(\d+)\s+(\d+[A-Za-z]?)\s+[\u4e00-\u9fa5]/g;
-    
-    const regex = isCallSheet ? callSheetRegex : scriptRegex;
-    const matches = [...text.matchAll(regex)];
-    const scenes = [];
-    const uniqueIds = new Set();
-    
-    matches.forEach(match => {
-        // 强行把通告单里的 "1 2A" 拼接成剧本里的 "1-2A" 以实现强制握手
-        const id = `${match[1]}-${match[2]}`; 
-        if (id && !uniqueIds.has(id)) {
-            uniqueIds.add(id);
-            scenes.push({ id, raw: match[0], index: match.index });
+    const normalizeSceneId = (rawValue) => {
+        if (!rawValue) return null;
+        const str = String(rawValue).trim();
+        const cleaned = str
+            .replace(/[\u2010-\u2015\u2212]/g, '-')
+            .replace(/\s+/g, '')
+            .replace(/（/g, '(')
+            .replace(/）/g, ')');
+
+        const match = cleaned.match(/^(\d{1,3})(?:-(\d{1,3}[A-Za-z]?)|\s*(\d{1,3}[A-Za-z]?))$/);
+        if (match) {
+            const first = match[1];
+            const second = match[2] || match[3];
+            return `${first}-${second}`;
         }
-    });
-    return scenes;
-};
+
+        const generic = cleaned.match(/^(\d{1,3})[-_\s](\d{1,3}[A-Za-z]?)$/);
+        if (generic) {
+            return `${generic[1]}-${generic[2]}`;
+        }
+
+        const plain = cleaned.match(/^(\d{1,3}[A-Za-z]?)$/);
+        if (plain) return plain[1];
+
+        return null;
+    };
+
+    const parseSceneIds = (text, isCallSheet = false) => {
+        if (!text) return [];
+
+        const scenes = [];
+        const seen = new Set();
+
+        const scenePatterns = [
+            /(?:^|\n|\r\n|\s)(\d{1,3})\s*[-–—]\s*(\d{1,3}[A-Za-z]?)(?=\s|$|[\),：:;；]|\() /g,
+            /(?:^|\n|\r\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)(?=\s|$|[\),：:;；]|\() /g,
+            /(?:^|\n|\r\n|\s)(\d{1,3})[-–—](\d{1,3}[A-Za-z]?)/g,
+            /(?:^|\n|\r\n|\s)(\d{1,3})\s+(\d{1,3}[A-Za-z]?)/g,
+        ];
+
+        for (const regex of scenePatterns) {
+            const matches = [...text.matchAll(regex)];
+            matches.forEach(match => {
+                const id = normalizeSceneId(`${match[1]}-${match[2]}`) || normalizeSceneId(`${match[1]} ${match[2]}`);
+                if (!id) return;
+                if (seen.has(id)) return;
+                seen.add(id);
+                scenes.push({
+                    id,
+                    raw: match[0].trim(),
+                    index: match.index ?? 0
+                });
+            });
+        }
+
+        // 过滤明显的非场次编号：月份、时间、页码等
+        const filtered = scenes.filter(scene => {
+            if (!scene.id) return false;
+            const [a, b] = scene.id.split('-');
+            const numA = Number(a);
+            const numB = Number((b || '').replace(/[^\d]/g, ''));
+            if (!Number.isFinite(numA) || !Number.isFinite(numB)) return false;
+            if (numA > 200 || numB > 200) return false;
+            return true;
+        });
+
+        if (filtered.length > 0) {
+            return filtered.sort((a, b) => a.index - b.index);
+        }
+
+        // 保底：如果是剧本、标题中也存在 "1-1" 这种格式，仍然返回最常见的 scene
+        const fallback = [...text.matchAll(/(?:^|\n|\r\n)\s*(\d{1,3})[-–—](\d{1,3}[A-Za-z]?)/g)];
+        const fallbackScenes = [];
+        fallback.forEach(match => {
+            const id = normalizeSceneId(`${match[1]}-${match[2]}`);
+            if (id && !seen.has(id)) fallbackScenes.push({ id, raw: match[0].trim(), index: match.index ?? 0 });
+        });
+        return fallbackScenes.sort((a, b) => a.index - b.index);
+    };
+
+    const buildSceneSearchPattern = (sceneId) => {
+        const safeId = sceneId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(?:^|\\n|\\r\\n)\\s*(?:第\\s*)?${safeId}\\b`, 'i');
+    };
 
     const chunkScriptByScenes = (scriptTxt, extractedScenes) => {
         const chunks = {};
-        if (!scriptTxt || extractedScenes.length === 0) return chunks;
+        if (!scriptTxt || !extractedScenes || extractedScenes.length === 0) return chunks;
 
-        // Try to find the position of each scene in the script text
         const positions = [];
         extractedScenes.forEach(scene => {
-            // Create a dynamic regex to find this specific scene in script
-            const escapedRaw = scene.raw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            // Try matching the exact phrase or just the ID
-            const searchRegex = new RegExp(`(?:${escapedRaw}|第\\s*${scene.id}\\s*场|场次\\s*${scene.id}|${scene.id})`, 'i');
-            const match = scriptTxt.match(searchRegex);
-            if (match) {
+            const match = scriptTxt.match(buildSceneSearchPattern(scene.id));
+            if (match && match.index !== undefined) {
                 positions.push({ id: scene.id, index: match.index });
+            } else {
+                const fallback = scriptTxt.search(new RegExp(`\\b${scene.id.replace(/-/g, '\\s*[-–—\\s]*')}\\b`, 'i'));
+                if (fallback >= 0) {
+                    positions.push({ id: scene.id, index: fallback });
+                }
             }
         });
 
@@ -207,8 +279,19 @@ const parseSceneIds = (text, isCallSheet = false) => {
             const next = positions[i + 1];
             const startIdx = curr.index;
             const endIdx = next ? next.index : scriptTxt.length;
-            chunks[curr.id] = scriptTxt.substring(startIdx, endIdx).trim();
+            const chunk = scriptTxt.substring(startIdx, endIdx).trim();
+            if (chunk) chunks[curr.id] = chunk;
         }
+
+        // 如果没有命中，则保底按 sceneId 直接取整个脚本并按场次标题判断
+        if (Object.keys(chunks).length === 0 && extractedScenes.length > 0) {
+            const firstScene = extractedScenes[0];
+            const firstMatch = scriptTxt.match(new RegExp(`(?:^|\\n|\\r\\n)\\s*(?:第\\s*)?${firstScene.id.replace(/[-]/g, '[-–—\\s]*')}\\b`, 'i'));
+            if (firstMatch && firstMatch.index !== undefined) {
+                chunks[firstScene.id] = scriptTxt.substring(firstMatch.index).trim();
+            }
+        }
+
         return chunks;
     };
 
@@ -218,60 +301,73 @@ const parseSceneIds = (text, isCallSheet = false) => {
     const handleProcessFiles = async (callSheetFile, scriptFile) => {
         try {
             if (!callSheetFile) {
-                showToast("请至少上传通告单！", "error");
+                showToast('请至少上传通告单！', 'error');
                 return;
             }
 
             setAppStatus('loading_deps');
             
             // 1. Extract Call Sheet Text
-            let csText = "";
-            if (callSheetFile.type === 'application/pdf') {
+            let csText = '';
+            if (callSheetFile.type === 'application/pdf' || callSheetFile.name.toLowerCase().endsWith('.pdf')) {
                 csText = await extractTextFromPdf(callSheetFile);
             } else {
-                csText = await callSheetFile.text(); // Fallback for txt
+                csText = await callSheetFile.text();
             }
 
             // 2. Extract Script Text (Optional)
-            let spText = "";
+            let spText = '';
             if (scriptFile) {
-                if (scriptFile.type === 'application/pdf') {
+                const fileName = scriptFile.name.toLowerCase();
+                if (scriptFile.type === 'application/pdf' || fileName.endsWith('.pdf')) {
                     spText = await extractTextFromPdf(scriptFile);
-                } else if (scriptFile.name.endsWith('.docx')) {
+                } else if (fileName.endsWith('.docx')) {
                     spText = await extractTextFromDocx(scriptFile);
                 } else {
-                    spText = await scriptFile.text(); // Fallback txt
+                    spText = await scriptFile.text();
                 }
             }
 
             // 3. Parse and Match
             const scenes = parseSceneIds(csText);
             if (scenes.length === 0) {
-                showToast("未能从通告单中识别到标准场次号(如1-1, 第1场)。提取可能不完整。", "error");
-                // Create a dummy scene to allow app to open
-                scenes.push({ id: 'Uncategorized', raw: '未识别分类', index: 0 });
+                const fallbackScenes = parseSceneIds(spText || csText, false);
+                if (fallbackScenes.length > 0) {
+                    setParsedScenes(fallbackScenes);
+                    setActiveSceneId(fallbackScenes[0].id);
+                    showToast('通告单未直接识别到场次号，已回退到剧本结构推断。', 'error');
+                } else {
+                    showToast('未能从通告单中识别到标准场次号(如1-1, 第1场)。提取可能不完整。', 'error');
+                    scenes.push({ id: 'Uncategorized', raw: '未识别分类', index: 0 });
+                }
             }
 
-            const chunks = chunkScriptByScenes(spText, scenes);
+            const finalScenes = scenes.length > 0 ? scenes : [{ id: 'Uncategorized', raw: '未识别���类', index: 0 }];
+            const chunks = chunkScriptByScenes(spText, finalScenes);
 
             setCallSheetText(csText);
             setScriptText(spText);
-            setParsedScenes(scenes);
+            setParsedScenes(finalScenes);
             setScriptChunks(chunks);
-            setActiveSceneId(scenes[0].id);
-            
-            showToast("解析成功！已自动匹配场次与剧本。");
+            setActiveSceneId(finalScenes[0]?.id || null);
+
+            if (finalScenes.length === 1 && finalScenes[0].id === 'Uncategorized') {
+                showToast('已导入文件，但未识别到标准场次编号，请手动检查文件格式。', 'error');
+            } else {
+                showToast('解析成功！已自动匹配场次与剧本。');
+            }
             setAppStatus('workspace');
 
         } catch (error) {
             console.error(error);
-            showToast("文件解析失败，请检查格式是否为标准 PDF/DOCX。", "error");
+            showToast('文件解析失败，请检查格式是否为标准 PDF/DOCX。', 'error');
             setAppStatus('import');
         }
     };
 
     const clearData = async () => {
-        await window.localforage.removeItem(STORAGE_KEY);
+        const lf = safeLocalforage();
+        if (lf) await lf.removeItem(STORAGE_KEY);
         setCallSheetText('');
         setScriptText('');
         setParsedScenes([]);
@@ -415,7 +511,7 @@ function ImportScreen({ onProcess, toast }) {
     const handleStart = async () => {
         setIsProcessing(true);
         await onProcess(callSheet, script);
-        setIsProcessing(false); // Reset if it failed and didn't unmount
+        setIsProcessing(false);
     };
 
     return (
@@ -432,7 +528,7 @@ function ImportScreen({ onProcess, toast }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Call Sheet Input */}
-                    <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors relative ${callSheet ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-700 bg-slate-800/50 hover:bg-slate-800'}`}>
+                    <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors relative ${callSheet ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-700 bg-slate-800/50 hover:border-emerald-500/40'}`}>
                         <input 
                             type="file" accept=".pdf,.txt"
                             onChange={e => setCallSheet(e.target.files[0])}
@@ -447,7 +543,7 @@ function ImportScreen({ onProcess, toast }) {
                     </div>
 
                     {/* Script Input */}
-                    <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors relative ${script ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-700 bg-slate-800/50 hover:bg-slate-800'}`}>
+                    <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors relative ${script ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-slate-700 bg-slate-800/50 hover:border-cyan-500/40'}`}>
                         <input 
                             type="file" accept=".pdf,.docx,.txt"
                             onChange={e => setScript(e.target.files[0])}
@@ -466,7 +562,7 @@ function ImportScreen({ onProcess, toast }) {
                     <button 
                         onClick={handleStart}
                         disabled={!callSheet || isProcessing}
-                        className="w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center shadow-lg shadow-amber-500/20"
+                        className="w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                     >
                         {isProcessing ? (
                             <><Clapperboard className="w-5 h-5 mr-2 animate-spin" /> 解析与加载中...</>
@@ -513,19 +609,14 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
         const container = containerRef.current;
         if (!canvas || !container || !activeSceneId) return;
 
-        // Set internal resolution strictly matching CSS size for crisp Apple Pencil drawing
         const rect = container.getBoundingClientRect();
-        // Avoid resetting if size is same, to prevent flicker, but must reset on scene change
         canvas.width = rect.width;
-        canvas.height = 200; // Fixed height for drawing area
+        canvas.height = 200;
 
         const ctx = canvas.getContext('2d');
-        
-        // Fill base dark background
-        ctx.fillStyle = '#1e293b'; // slate-800
+        ctx.fillStyle = '#1e293b';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw 9:16 safe frame guide
         const cw = canvas.width;
         const ch = canvas.height;
         const vw = Math.round(ch * (9 / 16));
@@ -534,9 +625,8 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
         ctx.strokeRect(vx, 10, vw, ch - 20);
-        ctx.setLineDash([]); // reset
+        ctx.setLineDash([]);
 
-        // Load saved drawing if exists
         if (activeData.canvas) {
             const img = new Image();
             img.onload = () => {
@@ -544,7 +634,7 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
             };
             img.src = activeData.canvas;
         }
-    }, [activeSceneId]); // Reload when scene changes
+    }, [activeSceneId]);
 
     // Pointer Events for Drawing
     const getPos = (e) => {
@@ -562,7 +652,6 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
         const pos = getPos(e);
         ctx.beginPath();
         ctx.moveTo(pos.x, pos.y);
-        // Important for iPad: Capture pointer to prevent scrolling while drawing
         e.target.setPointerCapture(e.pointerId);
     };
 
@@ -570,7 +659,7 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
         if (!isDrawing) return;
         const ctx = canvasRef.current.getContext('2d');
         const pos = getPos(e);
-        ctx.strokeStyle = '#f59e0b'; // amber-500 for ink
+        ctx.strokeStyle = '#f59e0b';
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -581,20 +670,19 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
     const handlePointerUp = (e) => {
         if (!isDrawing) return;
         setIsDrawing(false);
-        e.target.releasePointerCapture(e.pointerId);
-        
-        // Save canvas to state (debounced natively by user lifting pen)
+        if (e && e.target && typeof e.target.releasePointerCapture === 'function') {
+            e.target.releasePointerCapture(e.pointerId);
+        }
         const dataUrl = canvasRef.current.toDataURL('image/png');
         updateActiveData('canvas', dataUrl);
     };
 
     const clearCanvas = () => {
         const canvas = canvasRef.current;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Redraw guides
         const cw = canvas.width;
         const ch = canvas.height;
         const vw = Math.round(ch * (9 / 16));
@@ -606,7 +694,7 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
         ctx.setLineDash([]);
 
         updateActiveData('canvas', null);
-        showToast("画板已清空");
+        showToast('画板已清空');
     };
 
     if (!activeSceneId) {
@@ -697,7 +785,7 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
                             onPointerMove={handlePointerMove}
                             onPointerUp={handlePointerUp}
                             onPointerOut={handlePointerUp}
-                            style={{ touchAction: 'none' }} // Prevents iPad scrolling while drawing
+                            style={{ touchAction: 'none' }}
                             className="absolute inset-0 cursor-crosshair w-full h-full"
                         />
                         <div className="absolute bottom-1.5 right-2 text-[9px] text-slate-600 pointer-events-none font-mono">
@@ -713,14 +801,13 @@ function Workstation({ activeSceneId, workstationData, setWorkstationData, showT
                         value={activeData.notes}
                         onChange={(e) => updateActiveData('notes', e.target.value)}
                         placeholder="输入光比要求、走位变化、灯具选型、台词飞页..."
-                        className="w-full flex-1 min-h-[120px] bg-slate-800/40 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 leading-relaxed focus:outline-none focus:border-amber-500 resize-none transition-colors"
+                        className="w-full flex-1 min-h-[120px] bg-slate-800/40 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 leading-relaxed focus:outline-none focus:border-amber-500 resize-none"
                     />
                 </div>
             </div>
         </section>
     );
 }
-
 
         // ========================================== //
         // ⬆️ 粘贴区域结束 ⬆️
