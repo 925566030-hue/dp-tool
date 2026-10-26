@@ -1,0 +1,9 @@
+{
+  "name": "不再遗憾的夏天 - 片场工作台",
+  "short_name": "片场工作台",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a"
+}
